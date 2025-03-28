@@ -8,6 +8,7 @@ import {
   createLoggerConfig,
   formatLogFileName,
 } from "./utils/logger.util";
+import { LogAnalyzer } from "./analytics/LogAnalyzer";
 
 // Niveaux de log disponibles
 const LOG_LEVELS: Record<string, number> = {
@@ -32,11 +33,13 @@ export class NehonixLogger {
   private static instance: NehonixLogger;
   private lastGroupTimes: Record<string, number> = {};
   private currentLogLevel: number;
+  private analyzer: LogAnalyzer;
 
   private constructor() {
     this.currentLogLevel =
       LOG_LEVELS[process.env.LOG_LEVEL?.toLowerCase() || "debug"] ||
       LOG_LEVELS.debug;
+    this.analyzer = LogAnalyzer.getInstance();
   }
 
   public static getInstance(): NehonixLogger {
@@ -182,6 +185,38 @@ export class NehonixLogger {
     const formattedMessage = this.formatMessage(timestamp, logLevel, messages);
     const coloredMessage = this.getColoredMessage(formattedMessage, logLevel);
 
+    // Analyse du message
+    const insights = this.analyzer.analyze(formattedMessage, timestamp, {
+      level: logLevel,
+      options,
+    });
+
+    // Si des insights sont trouvés et que le niveau est error ou warn
+    if (insights.length > 0 && (logLevel === "error" || logLevel === "warn")) {
+      const suggestions = this.analyzer.generateSuggestions();
+      if (suggestions.length > 0) {
+        console.log(chalk.cyan("\n🔍 Analyse des logs:"));
+        suggestions.forEach((suggestion) =>
+          console.log(chalk.yellow(suggestion))
+        );
+      }
+
+      const anomalies = this.analyzer.detectAnomalies();
+      if (anomalies.length > 0) {
+        console.log(chalk.red("\n⚡ Anomalies détectées:"));
+        anomalies.forEach((anomaly) => {
+          console.log(
+            chalk.magenta(
+              `   - Type: ${anomaly.type}\n` +
+                `     Fréquence: ${anomaly.frequency}x en 5 minutes\n` +
+                `     Catégorie: ${anomaly.category}\n` +
+                `     Sévérité: ${anomaly.severity}`
+            )
+          );
+        });
+      }
+    }
+
     // Affichage dans la console
     if (!options.logMode?.enable || options.logMode?.display_log) {
       this.writeToConsole(coloredMessage, logLevel);
@@ -194,11 +229,47 @@ export class NehonixLogger {
       this.writeToFile(logPath, formattedMessage, options, timestamp);
     }
   }
+
+  /**
+   * Ajoute un pattern personnalisé pour l'analyse des logs
+   */
+  public addAnalysisPattern(pattern: {
+    pattern: RegExp;
+    severity: "low" | "medium" | "high";
+    category: string;
+    suggestion?: string;
+  }): void {
+    this.analyzer.addPattern(pattern);
+  }
+
+  /**
+   * Réinitialise l'analyseur de logs
+   */
+  public resetAnalyzer(): void {
+    this.analyzer.reset();
+  }
 }
 
-// Fonction d'export pour une utilisation simple
-export function nehonixLogger(...args: unknown[]): void {
-  NehonixLogger.getInstance().log(...args);
+// Fonction d'export avec les méthodes d'analyse
+interface EnhancedLogger {
+  (...args: unknown[]): void;
+  addAnalysisPattern(pattern: {
+    pattern: RegExp;
+    severity: "low" | "medium" | "high";
+    category: string;
+    suggestion?: string;
+  }): void;
+  resetAnalyzer(): void;
 }
 
+function createLogger(): EnhancedLogger {
+  const logger = ((...args: unknown[]) =>
+    NehonixLogger.getInstance().log(...args)) as EnhancedLogger;
+  logger.addAnalysisPattern = (...args) =>
+    NehonixLogger.getInstance().addAnalysisPattern(...args);
+  logger.resetAnalyzer = () => NehonixLogger.getInstance().resetAnalyzer();
+  return logger;
+}
+
+export const nehonixLogger = createLogger();
 export default nehonixLogger;

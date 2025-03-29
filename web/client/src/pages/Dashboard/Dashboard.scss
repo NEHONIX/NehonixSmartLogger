@@ -1,0 +1,60 @@
+.dashboard {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+
+  &__header {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+
+    .stat-card {
+      background-color: var(--background-secondary);
+      padding: 1.5rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+      h3 {
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .value {
+        font-size: 2rem;
+        font-weight: 600;
+        color: var(--text-primary);
+
+        &.error {
+          color: var(--error-color);
+        }
+      }
+    }
+  }
+
+  &__charts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 2rem;
+
+    .chart-container {
+      background-color: var(--background-secondary);
+      padding: 1.5rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      min-height: 300px;
+
+      h2 {
+        color: var(--text-primary);
+        font-size: 1.25rem;
+        margin-bottom: 1rem;
+      }
+
+      canvas {
+        width: 100% !important;
+        height: calc(100% - 3rem) !important;
+      }
+    }
+  }
+}

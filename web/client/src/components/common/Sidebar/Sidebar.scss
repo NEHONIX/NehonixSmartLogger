@@ -1,0 +1,54 @@
+.sidebar {
+  width: 250px;
+  background-color: var(--background-color-dark);
+  padding: 2rem 0;
+  border-right: 1px solid var(--border-color);
+
+  &__menu {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+
+    li {
+      margin-bottom: 0.5rem;
+    }
+  }
+
+  &__link {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem 2rem;
+    color: var(--text-color);
+    text-decoration: none;
+    transition: all 0.3s ease;
+
+    svg {
+      font-size: 1.2rem;
+      color: var(--text-color-muted);
+      transition: color 0.3s ease;
+    }
+
+    span {
+      font-size: 0.95rem;
+    }
+
+    &:hover {
+      background-color: var(--primary-color-light);
+      color: var(--primary-color);
+
+      svg {
+        color: var(--primary-color);
+      }
+    }
+
+    &.active {
+      background-color: var(--primary-color);
+      color: var(--text-color-light);
+
+      svg {
+        color: var(--text-color-light);
+      }
+    }
+  }
+}

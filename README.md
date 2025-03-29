@@ -10,20 +10,20 @@ npm install nehonix-logger
 
 ## Fonctionnalités
 
--  **Coloration syntaxique** des logs dans la console
--  **Logging dans des fichiers** avec rotation automatique
--  **Chiffrement des logs** pour les données sensibles
--  **Analyse intelligente** des patterns d'erreurs
--  **Détection d'anomalies** en temps réel
--  **Suggestions automatiques** de correction
--  **Patterns personnalisables** pour l'analyse
+- **Coloration syntaxique** des logs dans la console
+- **Logging dans des fichiers** avec rotation automatique
+- **Chiffrement des logs** pour les données sensibles
+- **Analyse intelligente** des patterns d'erreurs
+- **Détection d'anomalies** en temps réel
+- **Suggestions automatiques** de correction
+- **Patterns personnalisables** pour l'analyse
 
 ## Utilisation
 
 ### Importation
 
 ```typescript
-import { nehonixLogger } from "nehonix-logger";
+import { NSMLogger } from "nehonix-logger";
 ```
 
 ### Exemples d'utilisation
@@ -31,22 +31,22 @@ import { nehonixLogger } from "nehonix-logger";
 #### Log simple
 
 ```typescript
-nehonixLogger("Message simple");
+NSMLogger("Message simple");
 ```
 
 #### Log avec niveau
 
 ```typescript
-nehonixLogger("error", "Une erreur est survenue");
-nehonixLogger("warn", "Attention !");
-nehonixLogger("info", "Information importante");
-nehonixLogger("debug", "Message de debug");
+NSMLogger("error", "Une erreur est survenue");
+NSMLogger("warn", "Attention !");
+NSMLogger("info", "Information importante");
+NSMLogger("debug", "Message de debug");
 ```
 
 #### Log avec configuration
 
 ```typescript
-nehonixLogger(
+NSMLogger(
   {
     logMode: {
       enable: true,
@@ -80,7 +80,7 @@ Le logger inclut des patterns prédéfinis pour détecter automatiquement :
 #### Ajout de patterns personnalisés
 
 ```typescript
-nehonixLogger.addAnalysisPattern({
+NSMLogger.addAnalysisPattern({
   pattern: /api rate limit exceeded/i,
   severity: "high",
   category: "api",
@@ -91,7 +91,7 @@ nehonixLogger.addAnalysisPattern({
 #### Réinitialisation de l'analyseur
 
 ```typescript
-nehonixLogger.resetAnalyzer();
+NSMLogger.resetAnalyzer();
 ```
 
 ### Détection d'anomalies

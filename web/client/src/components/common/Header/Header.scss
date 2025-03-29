@@ -1,0 +1,84 @@
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background-color: var(--background-secondary);
+  border-bottom: 1px solid var(--border-color);
+
+  &__logo {
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+  }
+
+  &__title {
+    h2 {
+      margin: 0;
+      font-size: 1.2rem;
+      font-weight: 500;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+
+    .theme-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 36px;
+      height: 36px;
+      border: none;
+      border-radius: 8px;
+      background-color: var(--background-primary);
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &:hover {
+        background-color: var(--background-secondary);
+        transform: scale(1.05);
+      }
+
+      &:active {
+        transform: scale(0.95);
+      }
+
+      svg {
+        transition: transform 0.3s ease;
+      }
+
+      &:hover svg {
+        transform: rotate(12deg);
+      }
+    }
+  }
+
+  &__connection-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+
+      &.connected {
+        background-color: var(--success-color);
+        box-shadow: 0 0 8px var(--success-color);
+      }
+
+      &.disconnected {
+        background-color: var(--error-color);
+        box-shadow: 0 0 8px var(--error-color);
+      }
+    }
+  }
+}

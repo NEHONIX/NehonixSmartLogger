@@ -1,0 +1,43 @@
+:root {
+  // Thème clair par défaut
+  --primary-color: #3b82f6;
+  --primary-color-rgb: 59, 130, 246;
+  --error-color: #ef4444;
+  --warn-color: #f59e0b;
+  --info-color: #3b82f6;
+  --success-color: #10b981;
+
+  // Variables pour le mode clair
+  &[data-theme="light"] {
+    --background-primary: #ffffff;
+    --background-secondary: #f3f4f6;
+    --text-primary: #1f2937;
+    --text-secondary: #6b7280;
+    --border-color: #e5e7eb;
+    --calendar-icon-filter: none;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+
+    // Couleurs spécifiques pour les niveaux de log
+    --log-error-bg: rgba(239, 68, 68, 0.1);
+    --log-warn-bg: rgba(245, 158, 11, 0.1);
+    --log-info-bg: rgba(59, 130, 246, 0.1);
+    --log-debug-bg: rgba(107, 114, 128, 0.1);
+  }
+
+  // Variables pour le mode sombre
+  &[data-theme="dark"] {
+    --background-primary: #1a1b1e;
+    --background-secondary: #2a2b2e;
+    --text-primary: #f3f4f6;
+    --text-secondary: #9ca3af;
+    --border-color: #374151;
+    --calendar-icon-filter: invert(1);
+    --shadow-color: rgba(0, 0, 0, 0.3);
+
+    // Couleurs spécifiques pour les niveaux de log
+    --log-error-bg: rgba(239, 68, 68, 0.15);
+    --log-warn-bg: rgba(245, 158, 11, 0.15);
+    --log-info-bg: rgba(59, 130, 246, 0.15);
+    --log-debug-bg: rgba(107, 114, 128, 0.15);
+  }
+}

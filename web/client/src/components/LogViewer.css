@@ -1,0 +1,162 @@
+.log-viewer {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: #1e1e1e;
+  color: #ffffff;
+  font-family: "Monaco", "Consolas", monospace;
+}
+
+.log-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background-color: #2d2d2d;
+  border-bottom: 1px solid #3d3d3d;
+}
+
+.connection-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.status-dot.connected {
+  background-color: #00c851;
+  box-shadow: 0 0 8px rgba(0, 200, 81, 0.5);
+}
+
+.status-dot.disconnected {
+  background-color: #ff4444;
+  box-shadow: 0 0 8px rgba(255, 68, 68, 0.5);
+}
+
+.controls {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.filter-input,
+.level-select {
+  padding: 0.5rem;
+  border: 1px solid #3d3d3d;
+  border-radius: 4px;
+  background-color: #2d2d2d;
+  color: #ffffff;
+  font-size: 0.9rem;
+}
+
+.filter-input {
+  width: 200px;
+}
+
+.level-select {
+  width: 150px;
+}
+
+.clear-button {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  background-color: #ff4444;
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.clear-button:hover {
+  background-color: #cc0000;
+}
+
+.log-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+.log-entry {
+  padding: 0.5rem;
+  margin-bottom: 0.5rem;
+  background-color: #2d2d2d;
+  border-left: 4px solid;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.log-timestamp {
+  color: #888;
+  margin-right: 1rem;
+}
+
+.log-level {
+  display: inline-block;
+  min-width: 60px;
+  padding: 0.2rem 0.5rem;
+  border-radius: 3px;
+  text-align: center;
+  margin-right: 1rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+}
+
+.log-level.error {
+  background-color: rgba(255, 68, 68, 0.2);
+  color: #ff4444;
+}
+
+.log-level.warn {
+  background-color: rgba(255, 187, 51, 0.2);
+  color: #ffbb33;
+}
+
+.log-level.info {
+  background-color: rgba(51, 181, 229, 0.2);
+  color: #33b5e5;
+}
+
+.log-level.debug {
+  background-color: rgba(0, 200, 81, 0.2);
+  color: #00c851;
+}
+
+.log-message {
+  color: #ffffff;
+}
+
+.log-data {
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background-color: #1e1e1e;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  white-space: pre-wrap;
+  color: #33b5e5;
+}
+
+/* Scrollbar styling */
+.log-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.log-container::-webkit-scrollbar-track {
+  background: #1e1e1e;
+}
+
+.log-container::-webkit-scrollbar-thumb {
+  background: #3d3d3d;
+  border-radius: 4px;
+}
+
+.log-container::-webkit-scrollbar-thumb:hover {
+  background: #4d4d4d;
+}

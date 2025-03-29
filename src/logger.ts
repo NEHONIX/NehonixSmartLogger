@@ -9,6 +9,9 @@ import {
   formatLogFileName,
 } from "./utils/logger.util";
 import { LogAnalyzer } from "./analytics/LogAnalyzer";
+import { EventEmitter } from "events";
+import WebSocket from "ws";
+import { NHX_CONFIG } from "../web/shared/config/logger.conf";
 
 // Niveaux de log disponibles
 const LOG_LEVELS: Record<string, number> = {
@@ -29,24 +32,57 @@ const LOG_COLORS = {
   debug: chalk.green,
 };
 
-export class NehonixLogger {
-  private static instance: NehonixLogger;
+export class NehonixSmartLogger extends EventEmitter {
+  private static instance: NehonixSmartLogger;
   private lastGroupTimes: Record<string, number> = {};
   private currentLogLevel: number;
   private analyzer: LogAnalyzer;
+  private wsClient: WebSocket | null = null;
 
   private constructor() {
+    super();
     this.currentLogLevel =
       LOG_LEVELS[process.env.LOG_LEVEL?.toLowerCase() || "debug"] ||
       LOG_LEVELS.debug;
     this.analyzer = LogAnalyzer.getInstance();
+    this.connectToWebSocket();
   }
 
-  public static getInstance(): NehonixLogger {
-    if (!NehonixLogger.instance) {
-      NehonixLogger.instance = new NehonixLogger();
+  private connectToWebSocket(): void {
+    try {
+      this.wsClient = new WebSocket(NHX_CONFIG._global_.__WEBSOCKET_URL__);
+
+      this.wsClient.on("open", () => {
+        console.log("NehonixSmartLogger connecté au serveur WebSocket");
+      });
+
+      this.wsClient.on("error", (error) => {
+        console.error("Erreur de connexion WebSocket:", error);
+      });
+
+      this.wsClient.on("close", () => {
+        console.log(
+          "Connexion WebSocket fermée, tentative de reconnexion dans 5s..."
+        );
+        setTimeout(() => this.connectToWebSocket(), 5000);
+      });
+    } catch (error) {
+      console.error("Erreur lors de la connexion au WebSocket:", error);
+      setTimeout(() => this.connectToWebSocket(), 5000);
     }
-    return NehonixLogger.instance;
+  }
+
+  private sendLogToWebSocket(logEntry: any): void {
+    if (this.wsClient?.readyState === WebSocket.OPEN) {
+      this.wsClient.send(JSON.stringify(logEntry));
+    }
+  }
+
+  public static getInstance(): NehonixSmartLogger {
+    if (!NehonixSmartLogger.instance) {
+      NehonixSmartLogger.instance = new NehonixSmartLogger();
+    }
+    return NehonixSmartLogger.instance;
   }
 
   private formatMessage(
@@ -185,6 +221,19 @@ export class NehonixLogger {
     const formattedMessage = this.formatMessage(timestamp, logLevel, messages);
     const coloredMessage = this.getColoredMessage(formattedMessage, logLevel);
 
+    // Créer l'entrée de log pour le WebSocket
+    const logEntry = {
+      timestamp,
+      level: logLevel.toLowerCase(),
+      message: messages
+        .map((m) => (typeof m === "object" ? JSON.stringify(m) : String(m)))
+        .join(" "),
+      data: messages.find((m) => typeof m === "object") || {},
+    };
+
+    // Envoyer le log au WebSocket
+    this.sendLogToWebSocket(logEntry);
+
     // Analyse du message
     const insights = this.analyzer.analyze(formattedMessage, timestamp, {
       level: logLevel,
@@ -264,12 +313,12 @@ interface EnhancedLogger {
 
 function createLogger(): EnhancedLogger {
   const logger = ((...args: unknown[]) =>
-    NehonixLogger.getInstance().log(...args)) as EnhancedLogger;
+    NehonixSmartLogger.getInstance().log(...args)) as EnhancedLogger;
   logger.addAnalysisPattern = (...args) =>
-    NehonixLogger.getInstance().addAnalysisPattern(...args);
-  logger.resetAnalyzer = () => NehonixLogger.getInstance().resetAnalyzer();
+    NehonixSmartLogger.getInstance().addAnalysisPattern(...args);
+  logger.resetAnalyzer = () => NehonixSmartLogger.getInstance().resetAnalyzer();
   return logger;
 }
 
-export const nehonixLogger = createLogger();
-export default nehonixLogger;
+export const NSMLogger = createLogger();
+export default NSMLogger;

@@ -1,10 +1,10 @@
-import nehonixLogger from "../logger";
+import NSMLogger from "../logger";
 
 // Log normal avec analyse automatique
-nehonixLogger("error", "Connection refused to database");
+NSMLogger("error", "Connection refused to database");
 
 // Ajouter un pattern personnalisé
-nehonixLogger.addAnalysisPattern({
+NSMLogger.addAnalysisPattern({
   pattern: /api rate limit exceeded/i,
   severity: "high",
   category: "api",
@@ -12,4 +12,4 @@ nehonixLogger.addAnalysisPattern({
 });
 
 // Réinitialiser l'analyseur si nécessaire
-nehonixLogger.resetAnalyzer();
+NSMLogger.resetAnalyzer();

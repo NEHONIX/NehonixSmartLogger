@@ -1,0 +1,22 @@
+.live-logs {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  gap: var(--spacing-lg);
+
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: var(--spacing-lg);
+  }
+
+  &__content {
+    flex: 1;
+    min-height: 0; // Important pour que le scroll fonctionne correctement
+    background-color: var(--background-color-dark);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+  }
+}

@@ -10,6 +10,12 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src/**/*"],
+  "include": [
+    "src/**/*",
+    "backup",
+    "web-interface",
+    "web/server",
+    "web/shared/config"
+  ],
   "exclude": ["node_modules", "dist"]
 }

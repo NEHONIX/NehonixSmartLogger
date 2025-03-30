@@ -97,7 +97,7 @@ export const Dashboard: React.FC = () => {
         </div>
       </header>
 
-      <div className="dashboard__charts">
+      {/* <div className="dashboard__charts">
         <div className="chart-container">
           <h2>Activité horaire</h2>
           <Line
@@ -118,7 +118,7 @@ export const Dashboard: React.FC = () => {
             }}
           />
         </div>
-      </div>
+      </div> */}
     </div>
   );
 };

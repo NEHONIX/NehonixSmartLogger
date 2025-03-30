@@ -3,10 +3,13 @@ import {
   LoginCredentials,
   RegisterCredentials,
   AuthResponse,
+  LoginResponse,
+  RegisterResponse,
 } from "../types/auth";
 import { NHX_CONFIG } from "../config/app.conf";
 
-const API_URL = process.env.REACT_APP_API_URL || "http://localhost:2798/api/logger";
+const API_URL =
+  process.env.REACT_APP_API_URL || "http://localhost:2798/api/logger";
 
 // Création de l'instance Axios
 const api = axios.create({
@@ -22,7 +25,8 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      window.location.href = NHX_CONFIG._app_endpoints_.__AUTH__.__LOGIN__;
+      // window.location.href = NHX_CONFIG._app_endpoints_.__AUTH__.__LOGIN__;
+      console.error("unauthorized");
     }
     return Promise.reject(error);
   }
@@ -30,13 +34,18 @@ api.interceptors.response.use(
 
 // Services d'authentification
 export const authApi = {
-  login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
-    const response = await api.post<AuthResponse>("/auth/login", credentials);
+  login: async (credentials: LoginCredentials): Promise<LoginResponse> => {
+    const response = await api.post<LoginResponse>("/auth/login", credentials);
     return response.data;
   },
 
-  register: async (data: RegisterCredentials): Promise<AuthResponse> => {
-    const response = await api.post<AuthResponse>("/auth/register", data);
+  register: async (data: RegisterCredentials): Promise<RegisterResponse> => {
+    const deviceInfo = await NHX_CONFIG._global_.__GET_SYS_INFO__();
+    const response = await api.post<RegisterResponse>("/auth/register", {
+      registerRequest: data,
+      deviceInfo,
+    });
+    console.log("register resoonse", response);
     return response.data;
   },
 
@@ -45,8 +54,8 @@ export const authApi = {
   },
 
   checkAuth: async (): Promise<AuthResponse> => {
-    const response = await api.get<AuthResponse>("/auth/check-auth");
-    return response.data;
+    const response = await api.get<{ data: AuthResponse }>("/auth/check-auth");
+    return response.data.data;
   },
 };
 

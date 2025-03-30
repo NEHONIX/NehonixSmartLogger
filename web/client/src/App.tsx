@@ -1,9 +1,12 @@
 import React from "react";
 import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
-import { AppRoutes } from "./routes";
 import "./App.css";
 import { useTheme } from "./hooks/useTheme";
+import { AppRoutes } from "./routes/AppRoutes";
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
 export const App: React.FC = () => {
   useTheme();
   return (

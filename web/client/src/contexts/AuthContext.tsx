@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { User, LoginCredentials, RegisterCredentials, AuthResponse } from "../types/auth";
+import { NSLUserDataInterface, RegisterCredentials } from "../types/auth";
 import { authApi } from "../services/api";
+import { toast } from "react-toastify";
 
 interface AuthContextType {
-  user: User | null;
+  user: NSLUserDataInterface | null;
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<void>;
@@ -17,12 +18,13 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<NSLUserDataInterface | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const checkAuth = async () => {
     try {
       const response = await authApi.checkAuth();
+      console.log("checkAuth response", response);
       setUser(response.user);
     } catch (error) {
       setUser(null);
@@ -35,7 +37,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     setIsLoading(true);
     try {
       const response = await authApi.login({ email, password });
-      setUser(response.user);
+      setUser(response.data.user);
+      toast.success(
+        `You have successfully logged in as ${response.data.user.username}`
+      );
     } finally {
       setIsLoading(false);
     }
@@ -43,7 +48,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const register = async (data: RegisterCredentials) => {
     const response = await authApi.register(data);
-    setUser(response.user);
+    if (response.success) {
+      toast.success(response.message);
+    }
   };
 
   const logout = async () => {

@@ -13,6 +13,7 @@ export const Register: React.FC = () => {
     password: "",
     confirmPassword: "",
     target: "dev" as UserTarget,
+    name: "",
     entrepriseName: "",
   });
   const [errors, setErrors] = useState<AuthError[]>([]);
@@ -72,6 +73,13 @@ export const Register: React.FC = () => {
       });
     }
 
+    if (!formData.name) {
+      newErrors.push({
+        field: "name",
+        message: "Le nom complet est requis",
+      });
+    }
+
     setErrors(newErrors);
     return newErrors.length === 0;
   };
@@ -125,7 +133,20 @@ export const Register: React.FC = () => {
               <span className="error-message">{getFieldError("email")}</span>
             )}
           </div>
-
+          <div className="form-group">
+            <input
+              type="text"
+              name="name"
+              placeholder="Nom complet"
+              value={formData.name}
+              onChange={handleChange}
+              className={getFieldError("name") ? "error" : ""}
+              disabled={isLoading}
+            />
+            {getFieldError("name") && (
+              <span className="error-message">{getFieldError("name")}</span>
+            )}
+          </div>
           <div className="form-group">
             <input
               type="password"

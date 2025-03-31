@@ -1,111 +1,112 @@
-import { useEffect, useRef, useState, useCallback } from "react";
-import { WebInterfaceConfig } from "../config/config";
+import { useEffect, useRef, useState } from "react";
+import { LogEntry, PerformanceMetrics } from "../types/app";
 
-interface WebSocketHookOptions {
-  onMessage?: (data: any) => void;
-  onConnect?: () => void;
-  onDisconnect?: () => void;
-  onError?: (error: Event) => void;
+export interface WebSocketHookProps {
+  wsUrl: string;
+  appId: string;
+  userId: string;
+  onLogs?: (logs: LogEntry[]) => void;
+  onMetrics?: (metrics: PerformanceMetrics) => void;
 }
 
-interface WebSocketHookResult {
-  isConnected: boolean;
-  sendMessage: (data: any) => void;
-}
-
-export const useWebSocket = (
-  config: WebInterfaceConfig,
-  options: WebSocketHookOptions = {}
-): WebSocketHookResult => {
-  const [isConnected, setIsConnected] = useState(false);
+export const useWebSocket = ({
+  wsUrl,
+  appId,
+  userId,
+  onLogs,
+  onMetrics,
+}: WebSocketHookProps) => {
   const wsRef = useRef<WebSocket | null>(null);
+  const [isConnected, setIsConnected] = useState(false);
   const reconnectAttemptsRef = useRef(0);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  const connect = useCallback(() => {
-    try {
-      if (wsRef.current?.readyState === WebSocket.OPEN) {
-        wsRef.current.close();
-      }
-
-      const ws = new WebSocket(config.wsUrl);
-
-      ws.onopen = () => {
-        console.log("WebSocket connecté");
-        setIsConnected(true);
-        reconnectAttemptsRef.current = 0;
-        options.onConnect?.();
-      };
-
-      ws.onclose = () => {
-        console.log("WebSocket déconnecté");
-        setIsConnected(false);
-        options.onDisconnect?.();
-
-        if (
-          config.autoReconnect &&
-          reconnectAttemptsRef.current < config.reconnectAttempts
-        ) {
-          console.log(
-            `Tentative de reconnexion ${reconnectAttemptsRef.current + 1}/${
-              config.reconnectAttempts
-            }...`
-          );
-          reconnectTimeoutRef.current = setTimeout(() => {
-            reconnectAttemptsRef.current++;
-            connect();
-          }, config.reconnectInterval);
-        } else if (reconnectAttemptsRef.current >= config.reconnectAttempts) {
-          console.log("Nombre maximum de tentatives de reconnexion atteint");
-        }
-      };
-
-      ws.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          options.onMessage?.(data);
-        } catch (error) {
-          console.error("Erreur lors du parsing des données:", error);
-        }
-      };
-
-      ws.onerror = (error) => {
-        console.error("Erreur WebSocket:", error);
-        options.onError?.(error);
-      };
-
-      wsRef.current = ws;
-    } catch (error) {
-      console.error("Erreur lors de la connexion WebSocket:", error);
-    }
-  }, [
-    config.wsUrl,
-    config.autoReconnect,
-    config.reconnectAttempts,
-    config.reconnectInterval,
-    options,
-  ]);
+  const maxReconnectAttempts = 5;
+  const reconnectDelay = 3000;
 
   useEffect(() => {
+    const connect = () => {
+      if (!wsUrl || !appId || !userId) {
+        console.error("Not allowed to connect to the WebSocket");
+        return;
+      }
+
+      try {
+        const ws = new WebSocket(wsUrl);
+
+        ws.onopen = () => {
+          console.log("Connecté au serveur de logs");
+          setIsConnected(true);
+          reconnectAttemptsRef.current = 0;
+          // Authentification
+          ws.send(
+            JSON.stringify({
+              type: "auth",
+              data: {
+                userId,
+                appId,
+              },
+            })
+          );
+        };
+
+        ws.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+          console.log("data", data);
+          switch (data.type) {
+            case "logs":
+              onLogs?.(data.data);
+              break;
+            case "metrics":
+              onMetrics?.(data.payload);
+              break;
+          }
+        };
+
+        ws.onclose = () => {
+          setIsConnected(false);
+          handleReconnect();
+        };
+
+        ws.onerror = (error) => {
+          console.error("Erreur WebSocket:", error);
+          setIsConnected(false);
+        };
+
+        wsRef.current = ws;
+      } catch (error) {
+        console.error("Erreur lors de la connexion au WebSocket:", error);
+        handleReconnect();
+      }
+    };
+
+    const handleReconnect = () => {
+      if (reconnectAttemptsRef.current < maxReconnectAttempts) {
+        reconnectAttemptsRef.current++;
+        setTimeout(connect, reconnectDelay);
+      }
+    };
+
     connect();
 
     return () => {
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-      }
       if (wsRef.current) {
         wsRef.current.close();
       }
     };
-  }, [connect]);
+  }, [wsUrl, appId, userId, onLogs, onMetrics]);
 
-  const sendMessage = useCallback((data: any) => {
+  const setFilters = (filters: { level?: string[]; appId?: string }) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify(data));
-    } else {
-      console.warn("WebSocket non connecté, impossible d'envoyer le message");
+      wsRef.current.send(
+        JSON.stringify({
+          type: "filter",
+          filters,
+        })
+      );
     }
-  }, []);
+  };
 
-  return { isConnected, sendMessage };
+  return {
+    isConnected,
+    setFilters,
+  };
 };

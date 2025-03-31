@@ -20,7 +20,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [user, setUser] = useState<NSLUserDataInterface | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
+  // console.warn("user: ", user);
   const checkAuth = async () => {
     try {
       const response = await authApi.checkAuth();

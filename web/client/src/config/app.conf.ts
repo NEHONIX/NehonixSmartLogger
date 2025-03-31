@@ -138,6 +138,7 @@ export class NHX_CONFIG {
 
   static _app_info_ = {
     __NAME__: NHX_CONFIG.APP_NAME,
+    __SHORT_NAME: "NSL",
     __VERSION__: NHX_CONFIG.APP_VERSION,
     __AUTHOR__: NHX_CONFIG.APP_AUTHOR,
     __DESCRIPTION__: NHX_CONFIG.APP_DESCRIPTION,

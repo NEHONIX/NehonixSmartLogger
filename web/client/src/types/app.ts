@@ -292,9 +292,9 @@ export interface App {
   lastActivity?: string;
   /** Description optionnelle de l'application */
   description?: string;
-  
+
   /** Configuration de l'application */
-  config?: CreateAppConfig;
+  config: AppConfig;
 }
 
 /**
@@ -1078,4 +1078,66 @@ export interface CreateAppResponse {
 export interface AppListResponse {
   /** Liste des applications */
   apps: App[];
+}
+
+export interface PerformanceMetrics {
+  cpu: {
+    usage: number;
+    cores: number;
+    temperature?: number;
+  };
+  memory: {
+    total: number;
+    used: number;
+    free: number;
+  };
+  disk: {
+    total: number;
+    used: number;
+    free: number;
+  };
+  network: {
+    bytesReceived: number;
+    bytesSent: number;
+    connections: number;
+  };
+  processes: {
+    total: number;
+    running: number;
+    blocked: number;
+  };
+  timestamp: string;
+}
+
+export interface LogEntry {
+  id: string;
+  timestamp: string;
+  level: "debug" | "info" | "warn" | "error" | "fatal";
+  message: string;
+  context?: Record<string, any>;
+  source?: string;
+  tags?: string[];
+  metadata?: {
+    userId?: string;
+    sessionId?: string;
+    requestId?: string;
+    [key: string]: any;
+  };
+}
+
+export interface Anomaly {
+  id: string;
+  type: "performance" | "error" | "security";
+  severity: "low" | "medium" | "high" | "critical";
+  description: string;
+  timestamp: string;
+  metrics?: PerformanceMetrics;
+  logs?: LogEntry[];
+  status: "active" | "resolved" | "investigating";
+}
+
+export interface TimeRange {
+  start: string;
+  end: string;
+  type: "hour" | "day" | "week";
 }

@@ -6,9 +6,9 @@ import { useTheme } from "./hooks/useTheme";
 import { AppRoutes } from "./routes/AppRoutes";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-
 export const App: React.FC = () => {
   useTheme();
+
   return (
     <BrowserRouter>
       <ToastContainer />

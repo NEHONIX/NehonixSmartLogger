@@ -35,9 +35,10 @@ export const LiveLogs: React.FC = () => {
     [addLogs]
   );
 
-  const { isConnected } = useWebSocket(defaultConfig, {
-    onMessage: handleMessage,
-  });
+  const { isConnected } = { isConnected: true }; //juste pour le test de la connexion
+  /**
+   * useWebSocket();
+   */
 
   // Filtrer les logs en fonction des critères
   const filteredLogs = logs.filter((log) => {

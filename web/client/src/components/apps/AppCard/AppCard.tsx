@@ -6,6 +6,8 @@ import { Power, Settings, Download, Trash2 } from "lucide-react";
 import "./AppCard.scss";
 import { useActionsLoading } from "../../../hooks/useActionsLoading";
 import { ButtonLoading } from "../../../utils/buttonLoading";
+import { useNavigate } from "react-router-dom";
+import { NHX_CONFIG } from "../../../config/app.conf";
 interface AppCardProps {
   app: App;
   onDelete: (appId: string) => void;
@@ -20,7 +22,7 @@ export const AppCard: React.FC<AppCardProps> = ({
   onShowConfig,
 }) => {
   const [isLoading, setIsLoading] = useState(false);
-
+  const navigate = useNavigate();
   const { setIsLoading: setIsActionsLoading, isLoading: isActionsLoading } =
     useActionsLoading();
 
@@ -115,7 +117,14 @@ export const AppCard: React.FC<AppCardProps> = ({
         </div>
       </div>
 
-      <div className="app-details">
+      <div
+        className="app-details"
+        onClick={() =>
+          navigate(
+            `${NHX_CONFIG._app_endpoints_._MAIN__.__ANALYTICS__}/${app.id}`
+          )
+        }
+      >
         {app.description && <p className="description">{app.description}</p>}
         <div className="metadata">
           <span>ID: {app.id}</span>

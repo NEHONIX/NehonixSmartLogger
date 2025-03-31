@@ -35,7 +35,7 @@ graph TD
     A -->|API REST| B
     B -->|WebSocket| C[Interface Web]
     B -->|API REST| C
-    B -->|Base de données| D[(MongoDB)]
+    B -->|Base de données| D[(DB)]
 ```
 
 ### 2.1 Composants

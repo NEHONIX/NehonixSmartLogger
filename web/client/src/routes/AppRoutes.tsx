@@ -8,6 +8,7 @@ import { Analytics } from "../pages/Analytics/Analytics";
 import { Unauthorized } from "../pages/Unauthorized/Unauthorized";
 import { ProtectedLayout } from "../components/common/ProtectedLayout/ProtectedLayout";
 import { NHX_CONFIG } from "../config/app.conf";
+import { BtnActionsLoadingProvider } from "../hooks/useActionsLoading";
 
 export const AppRoutes: React.FC = () => {
   return (
@@ -45,7 +46,11 @@ export const AppRoutes: React.FC = () => {
             <Routes>
               <Route
                 path={NHX_CONFIG._app_endpoints_._MAIN__.__DASHBOARD__}
-                element={<Dashboard />}
+                element={
+                  <BtnActionsLoadingProvider>
+                    <Dashboard />
+                  </BtnActionsLoadingProvider>
+                }
               />
 
               <Route

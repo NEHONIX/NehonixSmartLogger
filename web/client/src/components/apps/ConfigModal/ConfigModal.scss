@@ -1,0 +1,322 @@
+.config-modal {
+  max-width: 800px !important;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  animation: modal-appear 0.3s ease-out;
+}
+
+@keyframes modal-appear {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modal-header {
+  background: linear-gradient(135deg, #3a7bd5, #2456a6);
+  padding: 1.2rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+
+  h2 {
+    color: white;
+    font-weight: 600;
+    margin: 0;
+    font-size: 1.4rem;
+  }
+
+  .close-button {
+    color: white;
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: background 0.2s;
+    outline: none;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+  }
+}
+
+.config-content {
+  padding: 1.5rem;
+  max-height: 75vh;
+  overflow-y: auto;
+  background-color: var(--background-color, #f5f7fa);
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 4px;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.3);
+    }
+  }
+}
+
+.config-section {
+  margin-bottom: 2.5rem;
+  background-color: var(--section-background, white);
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s, box-shadow 0.2s;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  }
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  h3 {
+    color: var(--text-color, #333);
+    margin: 0 0 1rem;
+    font-size: 1.2rem;
+    font-weight: 600;
+    position: relative;
+    padding-bottom: 0.5rem;
+
+    &::after {
+      content: "";
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 40px;
+      height: 3px;
+      background: linear-gradient(90deg, #3a7bd5, #2456a6);
+      border-radius: 3px;
+    }
+  }
+
+  p {
+    color: var(--text-color-secondary, #666);
+    margin: 0 0 1rem;
+    line-height: 1.6;
+  }
+
+  code {
+    background-color: var(--code-background, #f1f3f5);
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    font-family: "Fira Code", "Consolas", monospace;
+    font-size: 0.9rem;
+    color: #e83e8c;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+  }
+
+  ol {
+    color: var(--text-color-secondary, #666);
+    padding-left: 1.5rem;
+    margin: 1rem 0;
+    line-height: 1.6;
+    counter-reset: li;
+
+    li {
+      margin-bottom: 1rem;
+      position: relative;
+      padding-left: 0.5rem;
+
+      &::marker {
+        color: #3a7bd5;
+        font-weight: 600;
+      }
+    }
+  }
+}
+
+.code-block {
+  position: relative;
+  background-color: var(--code-background, #2d333b);
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 1.2rem 0;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+
+  pre {
+    margin: 0;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    max-height: 300px;
+    overflow-y: auto;
+    padding-right: 1rem;
+
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 3px;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.3);
+      }
+    }
+
+    code {
+      color: var(--code-text-color, #e6e6e6);
+      font-family: "Fira Code", "Consolas", monospace;
+      font-size: 0.9rem;
+      line-height: 1.5;
+      background: none;
+      padding: 0;
+      border: none;
+      display: block;
+
+      .string {
+        color: #a8ff60;
+      }
+      .number {
+        color: #ff9d00;
+      }
+      .boolean {
+        color: #ff628c;
+      }
+      .null {
+        color: #ff628c;
+      }
+      .key {
+        color: #e1efff;
+      }
+    }
+  }
+
+  .copy-button {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 4px;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.9rem;
+    padding: 0.4rem 0.6rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+    }
+
+    &:active {
+      transform: scale(0.95);
+    }
+
+    &::before {
+      content: "";
+      margin-right: 0.3rem;
+    }
+  }
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 1rem;
+    background: #3a7bd5;
+    color: white;
+    font-size: 0.7rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 0 0 4px 4px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+}
+
+// Support for dark mode
+html[data-theme="dark"] {
+  .config-content {
+    --background-color: #1a1a1a;
+  }
+
+  .config-section {
+    --section-background: #252525;
+    --text-color: #e1e1e1;
+    --text-color-secondary: #b0b0b0;
+    --code-background: #333;
+  }
+
+  .code-block {
+    --code-background: #1d232a;
+    --code-text-color: #e1e1e1;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+  }
+}
+
+// Animation for the clipboard icon
+@keyframes copied {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.copied {
+  animation: copied 0.3s ease;
+
+  &::before {
+    content: "✓";
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+  .config-modal {
+    max-width: 95% !important;
+    margin: 2.5vh auto;
+  }
+
+  .config-content {
+    padding: 1rem;
+    max-height: 85vh;
+  }
+
+  .config-section {
+    padding: 1rem;
+  }
+
+  .modal-header h2 {
+    font-size: 1.2rem;
+  }
+}

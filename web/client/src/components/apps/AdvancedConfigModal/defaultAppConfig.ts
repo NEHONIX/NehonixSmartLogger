@@ -1,0 +1,38 @@
+import { CreateAppConfig } from "../../../types/app";
+
+export const defaultAppConfig: CreateAppConfig = {
+  logLevel: "debug",
+  encryption: {
+    enabled: false,
+    key: "",
+  },
+  console: {
+    enabled: true,
+    showTimestamp: true,
+    showLogLevel: true,
+    colorized: true,
+    format: "simple",
+  },
+  persistence: {
+    enabled: false,
+    maxSize: 100,
+    rotationInterval: "daily",
+    retentionPeriod: 30,
+    compressArchives: true,
+  },
+  network: {
+    batchSize: 50,
+    retryAttempts: 3,
+    retryDelay: 1000,
+    timeout: 5000,
+    offlineStorage: true,
+    maxOfflineSize: 50,
+  },
+  performance: {
+    enabled: false,
+    samplingRate: 10,
+    maxEventsPerSecond: 100,
+    monitorMemory: true,
+    monitorCPU: true,
+  },
+};

@@ -1,0 +1,77 @@
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.button-loading {
+  &:hover {
+    opacity: 0.8;
+  }
+
+  &:active {
+    transform: scale(0.98);
+  }
+
+  .btn-loading-spin {
+    animation: spin 1s linear infinite;
+  }
+}
+
+// Variantes de taille
+.button-loading {
+  &.small {
+    min-width: 24px;
+    min-height: 24px;
+    padding: 4px 8px;
+
+    .btn-loading-spin {
+      width: 14px;
+      height: 14px;
+    }
+  }
+
+  &.large {
+    min-width: 40px;
+    min-height: 40px;
+    padding: 8px 16px;
+
+    .btn-loading-spin {
+      width: 20px;
+      height: 20px;
+    }
+  }
+}
+
+// Variantes de couleur
+.button-loading {
+  &.primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+
+    .btn-loading-spin {
+      color: var(--text-on-primary);
+    }
+  }
+
+  &.secondary {
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+
+    .btn-loading-spin {
+      color: var(--text-on-secondary);
+    }
+  }
+
+  &.danger {
+    background-color: var(--danger-color);
+    border-color: var(--danger-color);
+
+    .btn-loading-spin {
+      color: var(--text-on-danger);
+    }
+  }
+}

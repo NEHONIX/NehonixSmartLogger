@@ -1,0 +1,529 @@
+// Variables
+$primary-color: #3498db;
+$primary-dark: darken($primary-color, 15%);
+$secondary-color: #2ecc71;
+$danger-color: #e74c3c;
+$text-color: #2c3e50;
+$light-bg: #f8f9fa;
+$modal-bg: #ffffff;
+$border-radius: 8px;
+$box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+$transition-speed: 0.3s;
+
+// Mixins
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin glass-effect {
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  background-color: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.2);
+}
+
+@mixin button-styles($bg-color, $text-color: white) {
+  background-color: $bg-color;
+  color: $text-color;
+  border: none;
+  border-radius: $border-radius;
+  padding: 10px 20px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all $transition-speed ease;
+
+  &:hover {
+    background-color: darken($bg-color, 10%);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(darken($bg-color, 20%), 0.3);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    background-color: lighten($bg-color, 20%);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+}
+
+@mixin input-styles {
+  width: 100%;
+  padding: 12px 15px;
+  border: 1px solid #ddd;
+  border-radius: $border-radius;
+  font-size: 1rem;
+  transition: all $transition-speed ease;
+
+  &:focus {
+    border-color: $primary-color;
+    box-shadow: 0 0 0 2px rgba($primary-color, 0.2);
+    outline: none;
+  }
+
+  &.error {
+    border-color: $danger-color;
+    box-shadow: 0 0 0 2px rgba($danger-color, 0.2);
+  }
+
+  &:disabled {
+    background-color: #f5f5f5;
+    cursor: not-allowed;
+  }
+}
+
+// Keyframes
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba($primary-color, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba($primary-color, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba($primary-color, 0);
+  }
+}
+
+// Main styles
+.modal-overlay {
+  @include flex-center;
+  position: fixed;
+  overflow-y: auto;
+  height: 100vh;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  animation: fadeIn $transition-speed ease;
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(
+      circle at center,
+      transparent 0%,
+      rgba(0, 0, 0, 0.7) 100%
+    );
+    z-index: -1;
+  }
+}
+
+.modal-content {
+  width: 65%;
+  text-align: center;
+  max-width: 100vw;
+  background-color: $modal-bg;
+  border-radius: $border-radius;
+  box-shadow: $box-shadow;
+  overflow-y: auto;
+  overflow-x: hidden;
+  animation: slideUp 0.4s ease-out;
+  transform-origin: bottom center;
+  position: relative;
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 5px;
+    background: linear-gradient(90deg, $primary-color, $secondary-color);
+  }
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 25px;
+  border-bottom: 1px solid #eee;
+  background-color: $light-bg;
+
+  h2 {
+    margin: 0;
+    color: $text-color;
+    font-size: 1.5rem;
+    font-weight: 600;
+    position: relative;
+
+    &::after {
+      content: "";
+      position: absolute;
+      bottom: -5px;
+      left: 0;
+      width: 50px;
+      height: 3px;
+      background: linear-gradient(90deg, $primary-color, $secondary-color);
+      border-radius: 3px;
+    }
+  }
+
+  .close-button {
+    background: none;
+    border: none;
+    font-size: 1.8rem;
+    line-height: 1;
+    color: #aaa;
+    cursor: pointer;
+    transition: color $transition-speed ease;
+
+    &:hover {
+      color: $danger-color;
+      transform: rotate(90deg);
+    }
+
+    &:disabled {
+      color: #ddd;
+      cursor: not-allowed;
+      transform: none;
+    }
+  }
+}
+
+.app-form {
+  padding: 25px;
+
+  .form-group {
+    margin-bottom: 20px;
+
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: $text-color;
+
+      &.checkbox-label {
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+
+        input[type="checkbox"] {
+          margin-right: 10px;
+          appearance: none;
+          width: 18px;
+          height: 18px;
+          border: 2px solid #ddd;
+          border-radius: 4px;
+          position: relative;
+          transition: all $transition-speed ease;
+
+          &:checked {
+            background-color: $primary-color;
+            border-color: $primary-color;
+
+            &::after {
+              content: "✓";
+              position: absolute;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%);
+              color: white;
+              font-size: 12px;
+            }
+          }
+
+          &:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px rgba($primary-color, 0.2);
+          }
+
+          &:disabled {
+            background-color: #f5f5f5;
+            border-color: #ddd;
+            cursor: not-allowed;
+          }
+        }
+      }
+    }
+
+    input[type="text"],
+    textarea,
+    select {
+      @include input-styles;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    select {
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23333' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'%3E%3C/path%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 15px center;
+      padding-right: 40px;
+    }
+  }
+
+  .form-section {
+    margin: 25px 0;
+
+    .toggle-config {
+      background: none;
+      border: none;
+      color: $primary-color;
+      font-weight: 500;
+      cursor: pointer;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      transition: color $transition-speed ease;
+
+      &::before {
+        content: "";
+        display: inline-block;
+        width: 0;
+        height: 0;
+        border-style: solid;
+        border-width: 5px 5px 0 5px;
+        border-color: $primary-color transparent transparent transparent;
+        margin-right: 8px;
+        transition: transform $transition-speed ease;
+      }
+
+      &:hover {
+        color: $primary-dark;
+        text-decoration: underline;
+      }
+    }
+
+    // Rotate the arrow when expanded
+    &:has(.advanced-config) .toggle-config::before {
+      transform: rotate(180deg);
+    }
+  }
+
+  .advanced-config {
+    margin-top: 20px;
+    padding: 20px;
+    border-radius: $border-radius;
+    background-color: $light-bg;
+    animation: slideUp 0.3s ease-out;
+
+    .encryption-group {
+      margin-bottom: 15px;
+    }
+
+    .encryption-key {
+      margin-top: 15px;
+      padding-left: 15px;
+      border-left: 2px solid rgba($primary-color, 0.3);
+      animation: slideUp 0.2s ease-out;
+    }
+  }
+
+  .error-message {
+    color: $danger-color;
+    background-color: rgba($danger-color, 0.1);
+    padding: 10px 15px;
+    border-radius: $border-radius;
+    margin-bottom: 20px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    border-left: 3px solid $danger-color;
+    animation: pulse 1.5s infinite;
+  }
+
+  .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+    margin-top: 30px;
+
+    .cancel-button {
+      @include button-styles(#e0e0e0, $text-color);
+    }
+
+    .submit-button {
+      @include button-styles($primary-color);
+
+      &:disabled {
+        position: relative;
+        overflow: hidden;
+
+        &::after {
+          content: "";
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 50%;
+          height: 100%;
+          background: linear-gradient(
+            90deg,
+            transparent,
+            rgba(255, 255, 255, 0.3),
+            transparent
+          );
+          animation: loading 1.5s infinite;
+        }
+      }
+    }
+  }
+}
+
+// Loading animation for button
+@keyframes loading {
+  from {
+    left: -100%;
+  }
+  to {
+    left: 100%;
+  }
+}
+
+// Responsive styles
+@media (max-width: 768px) {
+  .modal-content {
+    width: 95%;
+    max-width: none;
+  }
+
+  .modal-header h2 {
+    font-size: 1.3rem;
+  }
+
+  .app-form {
+    padding: 15px;
+  }
+
+  .modal-actions {
+    flex-direction: column;
+
+    button {
+      width: 100%;
+    }
+  }
+}
+
+// Dark mode support
+@media (prefers-color-scheme: dark) {
+  $dark-bg: #1a1a1a;
+  $dark-modal-bg: #2d2d2d;
+  $dark-text: #f0f0f0;
+  $dark-border: #444;
+  $dark-input-bg: #3d3d3d;
+
+  .modal-overlay {
+    background-color: rgba(0, 0, 0, 0.7);
+  }
+
+  .modal-content {
+    background-color: $dark-modal-bg;
+    color: $dark-text;
+  }
+
+  .modal-header {
+    background-color: darken($dark-modal-bg, 5%);
+    border-bottom-color: $dark-border;
+
+    h2 {
+      color: $dark-text;
+    }
+  }
+
+  .app-form {
+    .form-group {
+      label {
+        color: $dark-text;
+      }
+
+      input[type="text"],
+      textarea,
+      select {
+        background-color: $dark-input-bg;
+        border-color: $dark-border;
+        color: $dark-text;
+
+        &::placeholder {
+          color: rgba($dark-text, 0.5);
+        }
+
+        &:disabled {
+          background-color: darken($dark-input-bg, 5%);
+        }
+      }
+    }
+
+    .advanced-config {
+      background-color: darken($dark-modal-bg, 3%);
+    }
+
+    .cancel-button {
+      @include button-styles(#444, $dark-text);
+    }
+  }
+}
+
+// Print styles
+@media print {
+  .modal-overlay {
+    position: static;
+    background: none;
+    display: block;
+  }
+
+  .modal-content {
+    box-shadow: none;
+    border: 1px solid #ddd;
+  }
+
+  .modal-actions,
+  .close-button {
+    display: none;
+  }
+}
+
+// Custom scrollbar
+.modal-content {
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 10px;
+
+    &:hover {
+      background: #aaa;
+    }
+  }
+}

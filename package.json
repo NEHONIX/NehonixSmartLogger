@@ -21,9 +21,11 @@
   "author": "NEHONIX",
   "license": "MIT",
   "dependencies": {
+    "@types/react-syntax-highlighter": "^15.5.13",
     "@types/ws": "^8.18.0",
     "chalk": "^4.1.2",
     "nodemon": "^3.1.9",
+    "react-syntax-highlighter": "^15.6.1",
     "ws": "^8.18.1"
   },
   "devDependencies": {

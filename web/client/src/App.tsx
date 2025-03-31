@@ -11,6 +11,7 @@ export const App: React.FC = () => {
   useTheme();
   return (
     <BrowserRouter>
+      <ToastContainer />
       <AuthProvider>
         <AppRoutes />
       </AuthProvider>

@@ -24,7 +24,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const checkAuth = async () => {
     try {
       const response = await authApi.checkAuth();
-      console.log("checkAuth response", response);
       setUser(response.user);
     } catch (error) {
       setUser(null);

@@ -1,0 +1,247 @@
+// Variables
+$primary-color: #3a86ff;
+$success-color: #2ecc71;
+$danger-color: #e74c3c;
+$inactive-color: #95a5a6;
+$card-bg: #ffffff;
+$card-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+$card-radius: 12px;
+$transition-speed: 0.25s;
+
+.app-card {
+  background-color: $card-bg;
+  border-radius: $card-radius;
+  box-shadow: $card-shadow;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  transition: all $transition-speed ease-in-out;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  }
+  
+  .app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    
+    .app-info {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      
+      h3 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin: 0;
+        color: #333;
+      }
+      
+      .status-badge {
+        font-size: 0.75rem;
+        font-weight: 500;
+        padding: 0.25rem 0.75rem;
+        border-radius: 50px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        
+        &.active {
+          background-color: rgba($success-color, 0.15);
+          color: $success-color;
+        }
+        
+        &.inactive {
+          background-color: rgba($inactive-color, 0.15);
+          color: $inactive-color;
+        }
+      }
+    }
+    
+    .app-actions {
+      display: flex;
+      gap: 0.5rem;
+      
+      .action-button {
+        background: transparent;
+        border: none;
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all $transition-speed ease;
+        position: relative;
+        
+        &::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          border-radius: 8px;
+          background-color: transparent;
+          transition: all $transition-speed ease;
+          z-index: -1;
+          transform: scale(0.9);
+          opacity: 0;
+        }
+        
+        &:hover {
+          transform: translateY(-2px);
+          
+          &::before {
+            transform: scale(1);
+            opacity: 1;
+            background-color: rgba(#000, 0.05);
+          }
+          
+          .icon {
+            transform: scale(1.1);
+          }
+        }
+        
+        &:active {
+          transform: translateY(0);
+        }
+        
+        &:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+          
+          &:hover {
+            transform: none;
+            
+            &::before {
+              transform: scale(0.9);
+              opacity: 0;
+            }
+            
+            .icon {
+              transform: none;
+            }
+          }
+        }
+        
+        &.delete:hover {
+          .icon {
+            color: $danger-color;
+          }
+          
+          &::before {
+            background-color: rgba($danger-color, 0.1);
+          }
+        }
+        
+        .icon {
+          width: 18px;
+          height: 18px;
+          color: #666;
+          transition: all $transition-speed ease;
+          
+          &.active {
+            color: $success-color;
+          }
+          
+          &.inactive {
+            color: $inactive-color;
+          }
+        }
+      }
+    }
+  }
+  
+  .app-details {
+    .description {
+      font-size: 0.9rem;
+      line-height: 1.5;
+      color: #666;
+      margin-bottom: 1rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+    
+    .metadata {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      font-size: 0.8rem;
+      color: #888;
+      
+      span {
+        position: relative;
+        
+        &:not(:last-child)::after {
+          content: '•';
+          position: absolute;
+          right: -0.75rem;
+          color: #ccc;
+        }
+      }
+    }
+  }
+}
+
+// Animation d'état
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+// Media queries pour responsivité
+@media (max-width: 768px) {
+  .app-card {
+    padding: 1.25rem;
+    
+    .app-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 1rem;
+      
+      .app-actions {
+        width: 100%;
+        justify-content: flex-end;
+      }
+    }
+    
+    .metadata {
+      flex-direction: column;
+      gap: 0.5rem;
+      
+      span::after {
+        display: none;
+      }
+    }
+  }
+}
+
+// Effet de chargement
+.app-card.loading {
+  position: relative;
+  overflow: hidden;
+  
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.2),
+      transparent
+    );
+    animation: loading 1.5s infinite;
+  }
+}
+
+@keyframes loading {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}

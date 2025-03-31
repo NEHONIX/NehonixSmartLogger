@@ -1,124 +1,119 @@
-import React from "react";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-} from "chart.js";
-import { Line, Bar } from "react-chartjs-2";
-import { useLogState } from "../../hooks/useLogState";
-import { LogLevel } from "../../types/logs";
-import { WebInterfaceConfig } from "../../config/config";
+import React, { useState, useEffect } from "react";
+import { App, CreateAppResponse } from "../../types/app";
+import { appApi, toogleStatusProps } from "../../services/appApi";
+import { AppList } from "../../components/apps/AppList/AppList";
+import { CreateAppModal } from "../../components/apps/CreateAppModal/CreateAppModal";
+import { ConfigModal } from "../../components/apps/ConfigModal/ConfigModal";
 import "./Dashboard.scss";
-
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend
-);
-
-const config: WebInterfaceConfig = {
-  wsUrl: process.env.REACT_APP_WS_URL || "ws://localhost:3001",
-  refreshInterval: 5000,
-  maxLogEntries: 1000,
-  theme: "light",
-  dateFormat: "HH:mm:ss",
-  autoReconnect: true,
-  reconnectInterval: 3000,
-  reconnectAttempts: 5,
-};
+import { useFecthApps } from "../../hooks/useFetchApps";
+import { useActionsLoading } from "../../hooks/useActionsLoading";
+import { toast } from "react-toastify";
 
 export const Dashboard: React.FC = () => {
-  const { logs, stats } = useLogState(config);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [selectedConfig, setSelectedConfig] = useState<{
+    appId: string;
+    config: any;
+  } | null>(null);
 
-  const getChartData = () => {
-    // Données pour le graphique d'activité horaire
-    const hourlyData = {
-      labels: Array.from({ length: 24 }, (_, i) => `${i}h`),
-      datasets: [
-        {
-          label: "Activité horaire",
-          data: Array.from({ length: 24 }, () =>
-            Math.floor(Math.random() * 100)
-          ),
-          borderColor: "rgb(75, 192, 192)",
-          tension: 0.1,
-        },
-      ],
-    };
+  const { apps, isLoading, error, fetchApps } = useFecthApps();
+  const { setIsLoading: setIsActionsLoading } = useActionsLoading();
 
-    // Données pour la distribution des niveaux de log
-    const levelData = {
-      labels: ["Error", "Warn", "Info", "Debug"],
-      datasets: [
-        {
-          label: "Distribution par niveau",
-          data: [
-            stats?.byLevel[LogLevel.ERROR] || 0,
-            stats?.byLevel[LogLevel.WARN] || 0,
-            stats?.byLevel[LogLevel.INFO] || 0,
-            stats?.byLevel[LogLevel.DEBUG] || 0,
-          ],
-          backgroundColor: [
-            "rgba(255, 99, 132, 0.5)",
-            "rgba(255, 206, 86, 0.5)",
-            "rgba(75, 192, 192, 0.5)",
-            "rgba(153, 102, 255, 0.5)",
-          ],
-        },
-      ],
-    };
+  useEffect(() => {
+    fetchApps({ opt: { useCache: true } });
+  }, []);
 
-    return { hourlyData, levelData };
+  const handleCreateSuccess = (response: CreateAppResponse) => {
+    setIsCreateModalOpen(false);
+    fetchApps({ opt: { useCache: false } });
   };
 
-  const { hourlyData, levelData } = getChartData();
+  const handleDeleteApp = async (appId: string) => {
+    setIsActionsLoading(true);
+    if (
+      window.confirm("Etes-vous sûr de vouloir supprimer cette application ?")
+    ) {
+      try {
+        await appApi.deleteApp(appId);
+        fetchApps({ opt: { useCache: false } });
+      } catch (err) {
+        console.error("Erreur lors de la suppression:", err);
+      } finally {
+        setIsActionsLoading(false);
+      }
+    }
+  };
+
+  const handleStatusChange = async (toogleStatusProps: toogleStatusProps) => {
+    setIsActionsLoading(true);
+    try {
+      const res = (await appApi.toggleAppStatus(toogleStatusProps)).data;
+      fetchApps({ opt: { useCache: false } });
+      toast.success(res.message);
+    } catch (err: any) {
+      toast.error(err.response.data.message);
+    } finally {
+      setIsActionsLoading(false);
+    }
+  };
+
+  const handleShowConfig = async (appId: string) => {
+    setIsActionsLoading(true);
+    try {
+      const response = await appApi.downloadConfig(appId);
+      const text = await response.text();
+      const config = JSON.parse(text);
+      console.log("config response: ", config);
+      setSelectedConfig({ appId, config });
+    } catch (err) {
+      console.error("Erreur lors de la récupération de la configuration:", err);
+    } finally {
+      setIsActionsLoading(false);
+    }
+  };
+
+  if (isLoading) {
+    return <div className="loading">Chargement des applications...</div>;
+  }
+
+  if (error) {
+    return <div className="error">{error}</div>;
+  }
 
   return (
     <div className="dashboard">
-      <header className="dashboard__header">
-        <div className="stat-card">
-          <h3>Total des logs</h3>
-          <p className="value">{stats?.total || 0}</p>
-        </div>
-        <div className="stat-card">
-          <h3>Taux d'erreur</h3>
-          <p className="value error">{(stats?.errorRate || 0).toFixed(1)}%</p>
-        </div>
-      </header>
+      <div className="dashboard-header">
+        <h1>Mes Applications</h1>
+        <button
+          className="create-button"
+          onClick={() => setIsCreateModalOpen(true)}
+        >
+          Créer une application
+        </button>
+      </div>
 
-      {/* <div className="dashboard__charts">
-        <div className="chart-container">
-          <h2>Activité horaire</h2>
-          <Line
-            data={hourlyData}
-            options={{
-              responsive: true,
-              maintainAspectRatio: false,
-            }}
-          />
-        </div>
-        <div className="chart-container">
-          <h2>Distribution des logs</h2>
-          <Bar
-            data={levelData}
-            options={{
-              responsive: true,
-              maintainAspectRatio: false,
-            }}
-          />
-        </div>
-      </div> */}
+      <AppList
+        apps={apps}
+        onDelete={handleDeleteApp}
+        onStatusChange={handleStatusChange}
+        onShowConfig={handleShowConfig}
+      />
+
+      <CreateAppModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={handleCreateSuccess}
+        fetchApps={fetchApps}
+      />
+
+      {selectedConfig && (
+        <ConfigModal
+          isOpen={true}
+          onClose={() => setSelectedConfig(null)}
+          config={selectedConfig.config}
+          app={apps.find((app) => app.id === selectedConfig.appId)}
+        />
+      )}
     </div>
   );
 };

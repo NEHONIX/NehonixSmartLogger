@@ -1,27 +1,30 @@
-import { NSMLogger } from "../logger";
+import { NehonixSmartLogger, NSMLogger } from "../../logger";
 
 const text = "Hello World";
+const logger = NehonixSmartLogger.from("test_folder").import(
+  "nehonix.config.json"
+);
 
 //Simple log
-NSMLogger(text);
+logger.log(text);
 
 //Log with level
-NSMLogger("info", text);
+logger.log("info", text);
 
 //Log with level and message
-NSMLogger("error", text);
+logger.log("error", text);
 
 //Log with level and message and object
-NSMLogger("warn", { text, number: 1 });
+logger.log("warn", { text, number: 1 });
 
 //Log with level and message and array
-NSMLogger("debug", [text, text]);
+logger.log("debug", [text, text]);
 
 //Log with level and message and error
-NSMLogger("error", new Error("Error message"));
+logger.log("error", new Error("Error message"));
 
 //Log with level and message and error and object
-NSMLogger("warn", { text, number: 1 }, new Error("Error message"));
+logger.log("warn", { text, number: 1 }, new Error("Error message"));
 
 //logs with options
 NSMLogger(

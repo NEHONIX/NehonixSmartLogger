@@ -25,4 +25,7 @@ logs/
 
 # Système
 .DS_Store
-Thumbs.db 
+Thumbs.db
+
+# Private folder
+/private/ 

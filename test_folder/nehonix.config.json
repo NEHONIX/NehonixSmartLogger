@@ -1,0 +1,45 @@
+{
+  "user": {
+    "userId": "nehonix_719d48ac-35a6-4931-83d4-4ae52b8c7d38"
+  },
+  "app": {
+    "provider": "nehonix",
+    "apiKey": "nehonix@b4e35fc5c064a660bacfe257e720e3c1aee98332e8c8dbc7cdb904e53d1e6da6.nsl",
+    "appId": "38e3c785-2651-4a70-b5bf-8187dcd3d3c1",
+    "name": "App with description"
+  },
+  "logLevel": "debug",
+  "encryption": {
+    "enabled": false,
+    "key": ""
+  },
+  "console": {
+    "enabled": true,
+    "showTimestamp": true,
+    "showLogLevel": true,
+    "colorized": true,
+    "format": "simple"
+  },
+  "persistence": {
+    "enabled": false,
+    "maxSize": 100,
+    "rotationInterval": "daily",
+    "retentionPeriod": 30,
+    "compressArchives": true
+  },
+  "network": {
+    "batchSize": 50,
+    "retryAttempts": 3,
+    "retryDelay": 1000,
+    "timeout": 5000,
+    "offlineStorage": true,
+    "maxOfflineSize": 50
+  },
+  "performance": {
+    "enabled": false,
+    "samplingRate": 10,
+    "maxEventsPerSecond": 100,
+    "monitorMemory": true,
+    "monitorCPU": true
+  }
+}

@@ -35,7 +35,7 @@ graph TD
     A -->|API REST| B
     B -->|WebSocket| C[Interface Web]
     B -->|API REST| C
-    B -->|Base de données| D[(DB)]
+    B -->|Base de données| D[(MongoDB)]
 ```
 
 ### 2.1 Composants
@@ -240,46 +240,45 @@ NSL.log("info", "Information importante");
 NSL.log("debug", "Message de debug");
 ```
 
-#### Log avec configuration
+#### Log avec objet
 
 ```typescript
-NSMLogger(
-  {
-    logMode: {
-      enable: true,
-      name: "mon-app",
-      saved_message: "enable",
-      display_log: true,
-      crypt: {
-        CRYPT_DATAS: {
-          lockStatus: "enable",
-          key: "votre-clé-hexadécimale",
-        },
-      },
-    },
-    groupInterval: 5000, // Intervalle en ms entre les marqueurs de groupe
+NSMLogger("warn", {
+  message: "Attention : ressources limitées",
+  usage: {
+    cpu: "85%",
+    memory: "1.2GB",
+    disk: "90%",
   },
-  "Message avec configuration"
-);
-//Ou
-NSL.log(
-  {
-    logMode: {
-      enable: true,
-      name: "mon-app",
-      saved_message: "enable",
-      display_log: true,
-      crypt: {
-        CRYPT_DATAS: {
-          lockStatus: "enable",
-          key: "votre-clé-hexadécimale",
-        },
-      },
-    },
-    groupInterval: 5000, // Intervalle en ms entre les marqueurs de groupe
-  },
-  "Message avec configuration"
-);
+});
+```
+
+#### Log avec tableau
+
+```typescript
+NSMLogger("info", ["Démarrage", "Service A", "Service B", "Service C"]);
+```
+
+#### Log avec erreur
+
+```typescript
+try {
+  throw new Error("Erreur inattendue");
+} catch (error) {
+  NSMLogger("error", error);
+}
+```
+
+#### Log complexe
+
+```typescript
+NSMLogger("debug", {
+  action: "database_query",
+  duration: 1532,
+  query: "SELECT * FROM users WHERE active = true",
+  params: { active: true },
+  results: 150,
+});
 ```
 
 ## Utilisation (Avec suivie à distance)
@@ -287,12 +286,134 @@ NSL.log(
 ### Configuration avec fichier de config
 
 ```typescript
-export const _nls_auth_ = NSL.from("path_to_config_file").import(
-  "config_file_name"
-);
-export const logger = _nls_auth_.log;
-//example
-logger("Hello world");
+// 1. Installation
+npm install nehonix-logger
+
+// 2. Configuration
+// config/nehonix.config.json
+{
+  "app": {
+    "provider": "nodejs",
+    "apiKey": "votre-api-key",
+    "appId": "votre-app-id",
+    "name": "Mon Application"
+  },
+  "logLevel": "debug",
+  "encryption": {
+    "enabled": false,
+    "key": ""
+  },
+  "console": {
+    "enabled": true,
+    "showTimestamp": true,
+    "showLogLevel": true,
+    "colorized": true,
+    "format": "simple"
+  },
+  "persistence": {
+    "enabled": false,
+    "maxSize": 100,
+    "rotationInterval": "daily",
+    "retentionPeriod": 30,
+    "compressArchives": true
+  },
+  "network": {
+    "batchSize": 50,
+    "retryAttempts": 3,
+    "retryDelay": 1000,
+    "timeout": 5000,
+    "offlineStorage": true,
+    "maxOfflineSize": 50
+  },
+  "performance": {
+    "enabled": false,
+    "samplingRate": 10,
+    "maxEventsPerSecond": 100,
+    "monitorMemory": true,
+    "monitorCPU": true
+  }
+}
+
+// 3. Initialisation
+import { NSMLogger } from "nehonix-smart-logger";
+import config from "./config/nehonix.config.json";
+NSMLogger.initialize(config);
+```
+
+### Configuration avec credentials
+
+```typescript
+import { NehonixSmartLogger } from "nehonix-logger";
+
+const logger = NehonixSmartLogger.getInstance();
+logger.setCredentials("votre-user-id", "votre-app-id");
+const nhx_logger = logger.log;
+
+// Utilisation
+nhx_logger("Message de test");
+```
+
+### Exemple complet avec simulation
+
+```typescript
+import { NehonixSmartLogger, NSMLogger } from "nehonix-logger";
+
+const logger = NehonixSmartLogger.getInstance();
+const nhx_logger = logger.log;
+
+// Fonction de simulation
+const simulateLogging = () => {
+  // Log simple
+  NSMLogger("Hello World");
+
+  // Log avec niveau et message
+  setTimeout(() => {
+    NSMLogger("error", "Une erreur critique s'est produite !");
+  }, 1000);
+
+  // Log avec objet
+  setTimeout(() => {
+    NSMLogger("warn", {
+      message: "Attention : ressources limitées",
+      usage: {
+        cpu: "85%",
+        memory: "1.2GB",
+        disk: "90%",
+      },
+    });
+  }, 2000);
+
+  // Log avec tableau
+  setTimeout(() => {
+    NSMLogger("info", ["Démarrage", "Service A", "Service B", "Service C"]);
+  }, 3000);
+
+  // Log avec erreur
+  setTimeout(() => {
+    try {
+      throw new Error("Erreur inattendue dans le processus");
+    } catch (error) {
+      NSMLogger("error", error);
+    }
+  }, 4000);
+
+  // Log complexe
+  setTimeout(() => {
+    NSMLogger("debug", {
+      action: "database_query",
+      duration: 1532,
+      query: "SELECT * FROM users WHERE active = true",
+      params: { active: true },
+      results: 150,
+    });
+  }, 5000);
+};
+
+// Démarrer la simulation
+simulateLogging();
+
+// Répéter la simulation toutes les 10 secondes
+setInterval(simulateLogging, 10000);
 ```
 
 ## 4. Flux d'Utilisation

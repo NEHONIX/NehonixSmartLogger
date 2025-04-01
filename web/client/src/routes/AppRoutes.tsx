@@ -53,6 +53,16 @@ export const AppRoutes: React.FC = () => {
         }
       />
       <Route
+        path={`${NHX_CONFIG._app_endpoints_._MAIN__.__LOGS__}/:appId`}
+        element={
+          <ProtectedRoute>
+            <BtnActionsLoadingProvider>
+              <LiveLogs />
+            </BtnActionsLoadingProvider>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/*"
         element={
           <ProtectedLayout>
@@ -73,11 +83,6 @@ export const AppRoutes: React.FC = () => {
                     <Analytics />
                   </BtnActionsLoadingProvider>
                 }
-              />
-
-              <Route
-                path={NHX_CONFIG._app_endpoints_._MAIN__.__LOGS__}
-                element={<LiveLogs />}
               />
             </Routes>
           </ProtectedLayout>

@@ -105,7 +105,7 @@ export const LogViewer: React.FC<LogViewerProps> = ({ wsUrl }) => {
               isConnected ? "connected" : "disconnected"
             }`}
           />
-          {isConnected ? "Connecté" : "Déconnecté"}
+          {isConnected ? "Connected" : "Disconnected"}
         </div>
         <div className="controls">
           <input
@@ -130,7 +130,7 @@ export const LogViewer: React.FC<LogViewerProps> = ({ wsUrl }) => {
             <option value="debug">Debug</option>
           </select>
           <button onClick={clearLogs} className="clear-button">
-            Effacer
+            Clear
           </button>
         </div>
       </div>

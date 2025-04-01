@@ -1,101 +1,123 @@
 import { useEffect, useRef, useState } from "react";
 import { LogEntry, PerformanceMetrics } from "../types/app";
 
-export interface WebSocketHookProps {
+interface WebSocketConfig {
   wsUrl: string;
   appId: string;
   userId: string;
   onLogs?: (logs: LogEntry[]) => void;
   onMetrics?: (metrics: PerformanceMetrics) => void;
+  onAuthSuccess?: () => void;
+  onAuthError?: (error: string) => void;
 }
 
-export const useWebSocket = ({
-  wsUrl,
-  appId,
-  userId,
-  onLogs,
-  onMetrics,
-}: WebSocketHookProps) => {
-  const wsRef = useRef<WebSocket | null>(null);
+interface WebSocketState {
+  isConnected: boolean;
+  isAuthenticated: boolean;
+  setFilters: (filters: { level?: string[]; appId?: string }) => void;
+  clearLogs: () => void;
+  requestHistory: () => void;
+}
+
+export const useWebSocket = (config: WebSocketConfig): WebSocketState => {
   const [isConnected, setIsConnected] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const maxReconnectAttempts = 5;
   const reconnectDelay = 3000;
 
-  useEffect(() => {
-    const connect = () => {
-      if (!wsUrl || !appId || !userId) {
-        console.error("Not allowed to connect to the WebSocket");
-        return;
-      }
+  const connect = () => {
+    try {
+      wsRef.current = new WebSocket(config.wsUrl);
+      setIsAuthenticated(false);
 
-      try {
-        const ws = new WebSocket(wsUrl);
+      wsRef.current.onopen = () => {
+        console.log("WebSocket connecté");
+        setIsConnected(true);
+        reconnectAttemptsRef.current = 0;
 
-        ws.onopen = () => {
-          console.log("Connecté au serveur de logs");
-          setIsConnected(true);
-          reconnectAttemptsRef.current = 0;
-          // Authentification
-          ws.send(
+        // Authentification immédiate
+        if (wsRef.current?.readyState === WebSocket.OPEN) {
+          console.log("Envoi des credentials pour authentification");
+          wsRef.current.send(
             JSON.stringify({
               type: "auth",
               data: {
-                userId,
-                appId,
+                userId: config.userId,
+                appId: config.appId,
               },
             })
           );
-        };
+        }
+      };
 
-        ws.onmessage = (event) => {
-          const data = JSON.parse(event.data);
-          console.log("data", data);
-          switch (data.type) {
+      wsRef.current.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          console.log("message", message);
+          
+          switch (message.type) {
             case "logs":
-              onLogs?.(data.data);
+              config.onLogs?.(message.payload);
               break;
             case "metrics":
-              onMetrics?.(data.payload);
+              config.onMetrics?.(message.payload);
+              break;
+            case "auth_success":
+              console.log("Authentification réussie");
+              setIsAuthenticated(true);
+              config.onAuthSuccess?.();
+              break;
+            case "auth_error":
+              console.error("Erreur d'authentification:", message.payload);
+              setIsAuthenticated(false);
+              config.onAuthError?.(message.payload);
+              break;
+            case "history":
+              config.onLogs?.(message.payload);
               break;
           }
-        };
+        } catch (error) {
+          console.error("Erreur lors du traitement du message:", error);
+        }
+      };
 
-        ws.onclose = () => {
-          setIsConnected(false);
-          handleReconnect();
-        };
-
-        ws.onerror = (error) => {
-          console.error("Erreur WebSocket:", error);
-          setIsConnected(false);
-        };
-
-        wsRef.current = ws;
-      } catch (error) {
-        console.error("Erreur lors de la connexion au WebSocket:", error);
+      wsRef.current.onerror = (error) => {
+        console.error("Erreur WebSocket:", error);
+        setIsConnected(false);
+        setIsAuthenticated(false);
         handleReconnect();
-      }
-    };
+      };
 
-    const handleReconnect = () => {
-      if (reconnectAttemptsRef.current < maxReconnectAttempts) {
-        reconnectAttemptsRef.current++;
-        setTimeout(connect, reconnectDelay);
-      }
-    };
+      wsRef.current.onclose = () => {
+        console.log("WebSocket déconnecté");
+        setIsConnected(false);
+        setIsAuthenticated(false);
+        handleReconnect();
+      };
+    } catch (error) {
+      console.error("Erreur lors de la connexion:", error);
+      handleReconnect();
+    }
+  };
 
-    connect();
+  const handleReconnect = () => {
+    if (reconnectAttemptsRef.current < maxReconnectAttempts) {
+      reconnectAttemptsRef.current++;
+      console.log(
+        `Tentative de reconnexion ${reconnectAttemptsRef.current}/${maxReconnectAttempts}`
+      );
 
-    return () => {
-      if (wsRef.current) {
-        wsRef.current.close();
-      }
-    };
-  }, [wsUrl, appId, userId, onLogs, onMetrics]);
+      reconnectTimeoutRef.current = setTimeout(() => {
+        connect();
+      }, reconnectDelay);
+    }
+  };
 
   const setFilters = (filters: { level?: string[]; appId?: string }) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
+    if (wsRef.current?.readyState === WebSocket.OPEN && isAuthenticated) {
       wsRef.current.send(
         JSON.stringify({
           type: "filter",
@@ -105,8 +127,44 @@ export const useWebSocket = ({
     }
   };
 
+  const clearLogs = () => {
+    if (wsRef.current?.readyState === WebSocket.OPEN && isAuthenticated) {
+      wsRef.current.send(
+        JSON.stringify({
+          type: "clear",
+        })
+      );
+    }
+  };
+
+  const requestHistory = () => {
+    if (wsRef.current?.readyState === WebSocket.OPEN && isAuthenticated) {
+      wsRef.current.send(
+        JSON.stringify({
+          type: "history",
+        })
+      );
+    }
+  };
+
+  useEffect(() => {
+    connect();
+
+    return () => {
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
+    };
+  }, [config.wsUrl, config.userId, config.appId]);
+
   return {
     isConnected,
+    isAuthenticated,
     setFilters,
+    clearLogs,
+    requestHistory,
   };
 };

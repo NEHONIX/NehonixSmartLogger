@@ -1,7 +1,17 @@
 import chalk from "chalk";
 import fs from "fs";
 import path from "path";
-import type { SERVER_LOGGER_PROPS } from "./types/type";
+import type {
+  LOG_LEVELS_TYPE,
+  LogLevel,
+  NSL_CONFIG,
+  SERVER_LOGGER_PROPS,
+  WebSocketResponse,
+  LogEntry,
+  WebSocketMessage,
+  MonitoringConfig,
+  PerformanceMetrics,
+} from "./types/type";
 import crypto from "crypto";
 import {
   USE_DEFAULT_LOGGER,
@@ -12,9 +22,14 @@ import { LogAnalyzer } from "./analytics/LogAnalyzer";
 import { EventEmitter } from "events";
 import WebSocket from "ws";
 import { NHX_CONFIG } from "../web/shared/config/logger.conf";
+import {
+  LogPersistenceService,
+  LogRotationConfig,
+} from "./services/LogPersistenceService";
+import { PerformanceMonitoringService } from "./services/PerformanceMonitoringService";
 
 // Niveaux de log disponibles
-const LOG_LEVELS: Record<string, number> = {
+const LOG_LEVELS: LOG_LEVELS_TYPE = {
   none: 0,
   error: 1,
   warn: 2,
@@ -38,14 +53,78 @@ export class NehonixSmartLogger extends EventEmitter {
   private currentLogLevel: number;
   private analyzer: LogAnalyzer;
   private wsClient: WebSocket | null = null;
+  private reconnectAttempts: number = 0;
+  private readonly maxReconnectAttempts: number = 5;
+  private readonly reconnectDelay: number = 3000;
+  private userId?: string;
+  private userUid?: string;
+  private appId?: string;
+  private persistenceService: LogPersistenceService;
+  private monitoringService: PerformanceMonitoringService;
+  private config: NSL_CONFIG | null = null;
+  private configPath: string = "";
 
   private constructor() {
     super();
-    this.currentLogLevel =
-      LOG_LEVELS[process.env.LOG_LEVEL?.toLowerCase() || "debug"] ||
-      LOG_LEVELS.debug;
+    this.currentLogLevel = LOG_LEVELS.debug; // Valeur par défaut
     this.analyzer = LogAnalyzer.getInstance();
+    this.persistenceService = LogPersistenceService.getInstance();
+    this.monitoringService = PerformanceMonitoringService.getInstance();
     this.connectToWebSocket();
+  }
+
+  public static from(configPath: string): NehonixSmartLogger {
+    const instance = NehonixSmartLogger.getInstance();
+
+    // On utilise process.cwd() qui donne le répertoire de travail actuel
+    const currentDir = process.cwd();
+    // Résoudre le chemin relatif par rapport au répertoire de travail
+    instance.configPath = path.resolve(currentDir, configPath);
+
+    return instance;
+  }
+
+  public import(configName: string): NehonixSmartLogger {
+    try {
+      const configPath = path.join(this.configPath, configName);
+      console.log(chalk.yellowBright("Loading config from:", configPath));
+      const configContent = fs.readFileSync(configPath, "utf-8");
+      console.log(chalk.green("Config loaded successfully"));
+      this.config = JSON.parse(configContent) as NSL_CONFIG;
+      this.currentLogLevel =
+        LOG_LEVELS[
+          this.config.logLevel?.toLowerCase() as keyof LOG_LEVELS_TYPE
+        ] || LOG_LEVELS.debug;
+      this.setCredentials(this.config.user.userId, this.config.app.appId);
+      return this;
+    } catch (error) {
+      throw new Error(
+        "Erreur lors de l'importation de la configuration: " + error
+      );
+    }
+  }
+
+  public async initialize(config: {
+    persistence?: LogRotationConfig;
+    monitoring?: MonitoringConfig;
+  }): Promise<void> {
+    if (this.config) {
+      // Mise à jour du niveau de log depuis la configuration
+      this.currentLogLevel =
+        LOG_LEVELS[
+          this.config.logLevel?.toLowerCase() as keyof LOG_LEVELS_TYPE
+        ] || LOG_LEVELS.debug;
+    }
+
+    if (config.persistence) {
+      await this.persistenceService.initialize(config.persistence);
+    }
+    if (config.monitoring) {
+      await this.monitoringService.initialize(config.monitoring);
+      this.monitoringService.on("metrics", (metrics) => {
+        this.handleMetrics(metrics);
+      });
+    }
   }
 
   private connectToWebSocket(): void {
@@ -54,27 +133,134 @@ export class NehonixSmartLogger extends EventEmitter {
 
       this.wsClient.on("open", () => {
         console.log("NehonixSmartLogger connecté au serveur WebSocket");
+        this.reconnectAttempts = 0;
+        if (!this.userId || !this.appId) {
+          throw new Error(
+            "Fill your credentials to connect to the server, use the setCredentials method or import a config file"
+          );
+        }
+
+        this.authenticate();
+      });
+
+      this.wsClient.on("message", (data: string) => {
+        this.handleMessage(JSON.parse(data) as WebSocketResponse);
       });
 
       this.wsClient.on("error", (error) => {
-        console.error("Erreur de connexion WebSocket:", error);
+        throw new Error("Error while connecting to the WebSocket: " + error);
       });
 
       this.wsClient.on("close", () => {
-        console.log(
-          "Connexion WebSocket fermée, tentative de reconnexion dans 5s..."
-        );
-        setTimeout(() => this.connectToWebSocket(), 5000);
+        this.handleReconnect();
       });
     } catch (error) {
-      console.error("Erreur lors de la connexion au WebSocket:", error);
-      setTimeout(() => this.connectToWebSocket(), 5000);
+      throw new Error("Error while connecting to the WebSocket: " + error);
     }
   }
 
-  private sendLogToWebSocket(logEntry: any): void {
+  private handleReconnect(): void {
+    if (this.reconnectAttempts < this.maxReconnectAttempts) {
+      this.reconnectAttempts++;
+      console.log(
+        `Tentative de reconnexion ${this.reconnectAttempts}/${this.maxReconnectAttempts}`
+      );
+      setTimeout(() => this.connectToWebSocket(), this.reconnectDelay);
+    }
+  }
+
+  private authenticate(): void {
+    console.log("Authentificating with: ", {
+      userId: this.userId,
+      appId: this.appId,
+    });
+    if (
+      this.wsClient?.readyState === WebSocket.OPEN &&
+      this.userId &&
+      this.appId
+    ) {
+      const authMessage: WebSocketMessage = {
+        type: "auth",
+        data: {
+          userId: this.userId,
+          appId: this.appId,
+        },
+      };
+      this.wsClient.send(JSON.stringify(authMessage));
+    }
+  }
+
+  private handleMessage(message: WebSocketResponse): void {
+    console.log("got message", message);
+    switch (message.type) {
+      case "logs":
+        if (message.payload.logs) {
+          this.handleLogs(message.payload.logs);
+        }
+        break;
+      case "metrics":
+        if (message.payload.metrics) {
+          this.handleMetrics(message.payload.metrics);
+        }
+        break;
+      case "connect":
+        if (message.payload.appId && message.payload.userId) {
+          this.setCredentials(message.payload.userId, message.payload.appId);
+        }
+        break;
+      // case "auth_success":
+      //   break;
+      case "auth_error":
+        throw new Error("Auth error: " + message.payload.message);
+    }
+  }
+
+  private handleLogs(logs: LogEntry[]): void {
+    logs.forEach((log) => {
+      this.emit("log", log);
+    });
+  }
+
+  private handleMetrics(metrics: PerformanceMetrics): void {
+    this.emit("metrics", metrics);
+  }
+
+  private handleHistory(logs: LogEntry[]): void {
+    this.emit("history", logs);
+  }
+
+  private handleClear(): void {
+    this.emit("clear");
+  }
+
+  public setCredentials(userId: string, appId: string): void {
+    this.userId = userId;
+    this.appId = appId;
     if (this.wsClient?.readyState === WebSocket.OPEN) {
-      this.wsClient.send(JSON.stringify(logEntry));
+      this.authenticate();
+    }
+  }
+
+  public setFilters(filters: { level?: string[]; appId?: string }): void {
+    if (this.wsClient?.readyState === WebSocket.OPEN) {
+      const filterMessage: WebSocketMessage = {
+        type: "filter",
+        data: {
+          userId: this.userId || "",
+          appId: this.appId || "",
+          level: filters.level,
+        },
+      };
+      this.wsClient.send(JSON.stringify(filterMessage));
+    }
+  }
+
+  public clearLogs(): void {
+    if (this.wsClient?.readyState === WebSocket.OPEN) {
+      const clearMessage: WebSocketMessage = {
+        type: "clear",
+      };
+      this.wsClient.send(JSON.stringify(clearMessage));
     }
   }
 
@@ -131,36 +317,19 @@ export class NehonixSmartLogger extends EventEmitter {
     timestamp: string
   ): Promise<void> {
     try {
-      fs.mkdirSync(path.dirname(logPath), { recursive: true });
+      if (options.logMode?.enable) {
+        const rotationConfig: LogRotationConfig = {
+          maxSize: options.logMode.maxSize || 100, // 100MB par défaut
+          maxFiles: options.logMode.maxFiles || 10,
+          compress: options.logMode.compress || false,
+          interval: options.logMode.rotationInterval || "daily",
+        };
 
-      if (!fs.existsSync(logPath)) {
-        const header = `${path
-          .basename(logPath)
-          .toUpperCase()} LOG CREATED ON ${new Date().toLocaleString()}\n\n`;
-        fs.writeFileSync(logPath, header);
-      }
-
-      const fileKey = path.resolve(logPath);
-      const currentTime = Date.now();
-      const shouldAddGroupMarker =
-        !this.lastGroupTimes[fileKey] ||
-        currentTime - this.lastGroupTimes[fileKey] >
-          (options.groupInterval || 10000);
-
-      if (shouldAddGroupMarker) {
-        const groupMarker = `\n=== NEW LOG GROUP AT ${timestamp} ===\n`;
-        fs.appendFileSync(logPath, groupMarker);
-        this.lastGroupTimes[fileKey] = currentTime;
-
-        if (options.logMode?.saved_message === "enable") {
-          console.log(chalk.cyan(groupMarker));
-        }
-      }
-
-      fs.appendFileSync(logPath, `${message}\n`);
-
-      if (options.logMode?.saved_message === "enable") {
-        console.log(chalk.gray(`Saved log in: ${logPath}`));
+        await this.persistenceService.writeLog(
+          logPath,
+          message,
+          rotationConfig
+        );
       }
 
       // Chiffrement si nécessaire
@@ -184,6 +353,15 @@ export class NehonixSmartLogger extends EventEmitter {
       }
     } catch (error) {
       console.error(chalk.red("Error while writing to log file:", error));
+    }
+  }
+
+  public async shutdown(): Promise<void> {
+    await this.persistenceService.shutdown();
+    await this.monitoringService.shutdown();
+    if (this.wsClient) {
+      this.wsClient.close();
+      this.wsClient = null;
     }
   }
 
@@ -212,7 +390,8 @@ export class NehonixSmartLogger extends EventEmitter {
 
     // Vérification du niveau de log
     const requestedLevelValue =
-      LOG_LEVELS[logLevel.toLowerCase()] || LOG_LEVELS.log;
+      LOG_LEVELS[logLevel.toLowerCase() as keyof LOG_LEVELS_TYPE] ||
+      LOG_LEVELS.log;
     if (requestedLevelValue > this.currentLogLevel) {
       return;
     }
@@ -222,13 +401,18 @@ export class NehonixSmartLogger extends EventEmitter {
     const coloredMessage = this.getColoredMessage(formattedMessage, logLevel);
 
     // Créer l'entrée de log pour le WebSocket
-    const logEntry = {
+    const logEntry: LogEntry = {
+      id: crypto.randomBytes(16).toString("hex"),
       timestamp,
-      level: logLevel.toLowerCase(),
+      level: logLevel.toLowerCase() as LogLevel,
       message: messages
         .map((m) => (typeof m === "object" ? JSON.stringify(m) : String(m)))
         .join(" "),
-      data: messages.find((m) => typeof m === "object") || {},
+      metadata: messages.find((m) => typeof m === "object") as
+        | Record<string, unknown>
+        | undefined,
+      // appId: this.appId || "",
+      // userId: this.userId || "",
     };
 
     // Envoyer le log au WebSocket
@@ -296,6 +480,21 @@ export class NehonixSmartLogger extends EventEmitter {
    */
   public resetAnalyzer(): void {
     this.analyzer.reset();
+  }
+
+  private sendLogToWebSocket(logEntry: LogEntry): void {
+    if (this.wsClient?.readyState === WebSocket.OPEN) {
+      console.log("sendLogToWebSocket", logEntry);
+      const message: WebSocketMessage = {
+        type: "logs",
+        data: {
+          userId: this.userId || "",
+          appId: this.appId || "",
+          logs: [logEntry],
+        },
+      };
+      this.wsClient.send(JSON.stringify(message));
+    }
   }
 }
 

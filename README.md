@@ -391,7 +391,11 @@ logger("Hello world");
    - Activation/désactivation des logs (permettre à ce qu'un log s'affiche ou pas dans le navigateur)
    - Modification des niveaux
    - Gestion des alertes
+<<<<<<< HEAD
      -Possibilité de chiffrer les données avant qu'elle n'atteignent l'interface
+=======
+   -Possibilité de chiffrer les données avant qu'elle n'atteignent l'interface
+>>>>>>> 84a4903648a86747d0eb29c8c10c29e437a1d093
 
 ## 5. Sécurité
 
@@ -423,7 +427,11 @@ logger("Hello world");
 
 ## 7. Prochaines Étapes
 
+<<<<<<< HEAD
 ### 7.1 Phase 1
+=======
+### 7.1 Phase 1 
+>>>>>>> 84a4903648a86747d0eb29c8c10c29e437a1d093
 
 - Interface web basique
 - Logging en temps réel

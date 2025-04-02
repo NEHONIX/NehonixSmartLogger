@@ -1,164 +1,153 @@
-import { useEffect, useRef, useState } from "react";
-import { LogEntry, PerformanceMetrics } from "../types/app";
+import { useEffect, useRef, useState, useCallback } from "react";
+import { commandType, LogEntry, UserAction } from "../types/app";
 
 interface WebSocketConfig {
   wsUrl: string;
   appId: string;
   userId: string;
   onLogs?: (logs: LogEntry[]) => void;
-  onMetrics?: (metrics: PerformanceMetrics) => void;
   onAuthSuccess?: () => void;
   onAuthError?: (error: string) => void;
+  onCommandResponse?: (response: any) => void;
+  onActionsUpdate?: (actions: UserAction[]) => void;
+}
+
+export interface Command {
+  type: commandType;
+  data: any;
 }
 
 interface WebSocketState {
   isConnected: boolean;
   isAuthenticated: boolean;
-  setFilters: (filters: { level?: string[]; appId?: string }) => void;
+  setFilters: (filters: { appId: string; level?: string[] }) => void;
   clearLogs: () => void;
   requestHistory: () => void;
+  sendCommand: (command: Command) => void;
 }
 
 export const useWebSocket = (config: WebSocketConfig): WebSocketState => {
   const [isConnected, setIsConnected] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const reconnectAttemptsRef = useRef(0);
-  const maxReconnectAttempts = 5;
-  const reconnectDelay = 3000;
 
-  const connect = () => {
-    try {
-      wsRef.current = new WebSocket(config.wsUrl);
-      setIsAuthenticated(false);
+  useEffect(() => {
+    const ws = new WebSocket(config.wsUrl);
 
-      wsRef.current.onopen = () => {
-        console.log("WebSocket connecté");
-        setIsConnected(true);
-        reconnectAttemptsRef.current = 0;
-
-        // Authentification immédiate
-        if (wsRef.current?.readyState === WebSocket.OPEN) {
-          console.log("Envoi des credentials pour authentification");
-          wsRef.current.send(
-            JSON.stringify({
-              type: "auth",
-              data: {
-                userId: config.userId,
-                appId: config.appId,
-              },
-            })
-          );
-        }
-      };
-
-      wsRef.current.onmessage = (event) => {
-        try {
-          const message = JSON.parse(event.data);
-          console.log("message", message);
-          
-          switch (message.type) {
-            case "logs":
-              config.onLogs?.(message.payload);
-              break;
-            case "metrics":
-              config.onMetrics?.(message.payload);
-              break;
-            case "auth_success":
-              console.log("Authentification réussie");
-              setIsAuthenticated(true);
-              config.onAuthSuccess?.();
-              break;
-            case "auth_error":
-              console.error("Erreur d'authentification:", message.payload);
-              setIsAuthenticated(false);
-              config.onAuthError?.(message.payload);
-              break;
-            case "history":
-              config.onLogs?.(message.payload);
-              break;
-          }
-        } catch (error) {
-          console.error("Erreur lors du traitement du message:", error);
-        }
-      };
-
-      wsRef.current.onerror = (error) => {
-        console.error("Erreur WebSocket:", error);
-        setIsConnected(false);
-        setIsAuthenticated(false);
-        handleReconnect();
-      };
-
-      wsRef.current.onclose = () => {
-        console.log("WebSocket déconnecté");
-        setIsConnected(false);
-        setIsAuthenticated(false);
-        handleReconnect();
-      };
-    } catch (error) {
-      console.error("Erreur lors de la connexion:", error);
-      handleReconnect();
-    }
-  };
-
-  const handleReconnect = () => {
-    if (reconnectAttemptsRef.current < maxReconnectAttempts) {
-      reconnectAttemptsRef.current++;
-      console.log(
-        `Tentative de reconnexion ${reconnectAttemptsRef.current}/${maxReconnectAttempts}`
-      );
-
-      reconnectTimeoutRef.current = setTimeout(() => {
-        connect();
-      }, reconnectDelay);
-    }
-  };
-
-  const setFilters = (filters: { level?: string[]; appId?: string }) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN && isAuthenticated) {
-      wsRef.current.send(
+    ws.onopen = () => {
+      console.log("WebSocket connected");
+      setIsConnected(true);
+      ws.send(
         JSON.stringify({
-          type: "filter",
-          filters,
+          type: "auth",
+          data: {
+            userId: config.userId,
+            appId: config.appId,
+          },
         })
       );
-    }
-  };
+    };
 
-  const clearLogs = () => {
-    if (wsRef.current?.readyState === WebSocket.OPEN && isAuthenticated) {
+    ws.onclose = () => {
+      console.log("WebSocket disconnected");
+      setIsConnected(false);
+      setIsAuthenticated(false);
+    };
+
+    ws.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+      switch (message.type) {
+        case "auth_success":
+          setIsAuthenticated(true);
+          config.onAuthSuccess?.();
+          // Demander les actions après l'authentification
+          ws.send(JSON.stringify({ type: "get_last_actions" }));
+          break;
+        case "auth_error":
+          setIsAuthenticated(false);
+          config.onAuthError?.(message.payload.message);
+          break;
+        case "logs":
+        case "history":
+          if (message.payload) {
+            config.onLogs?.(message.payload);
+          }
+          break;
+        case "command_response":
+          config.onCommandResponse?.(message.payload);
+          break;
+        case "get_last_actions":
+          config.onActionsUpdate?.(message.payload);
+          break;
+      }
+    };
+
+    wsRef.current = ws;
+
+    return () => {
+      ws.close();
+    };
+  }, [config.wsUrl, config.userId, config.appId]);
+
+  const setFilters = useCallback(
+    (filters: { appId: string; level?: string[] }) => {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(
+          JSON.stringify({
+            type: "filter",
+            data: {
+              userId: config.userId,
+              appId: filters.appId,
+              level: filters.level,
+            },
+          })
+        );
+      }
+    },
+    [config.userId]
+  );
+
+  const clearLogs = useCallback(() => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(
         JSON.stringify({
           type: "clear",
         })
       );
     }
-  };
+  }, []);
 
-  const requestHistory = () => {
-    if (wsRef.current?.readyState === WebSocket.OPEN && isAuthenticated) {
+  const requestHistory = useCallback(() => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(
         JSON.stringify({
           type: "history",
+          data: {
+            userId: config.userId,
+            appId: config.appId,
+          },
         })
       );
     }
-  };
+  }, [config.userId, config.appId]);
 
-  useEffect(() => {
-    connect();
-
-    return () => {
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
+  const sendCommand = useCallback(
+    (command: Command) => {
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(
+          JSON.stringify({
+            type: "command",
+            data: {
+              userId: config.userId,
+              appId: config.appId,
+              ...command,
+            },
+          })
+        );
       }
-      if (wsRef.current) {
-        wsRef.current.close();
-      }
-    };
-  }, [config.wsUrl, config.userId, config.appId]);
+    },
+    [config.userId, config.appId]
+  );
 
   return {
     isConnected,
@@ -166,5 +155,6 @@ export const useWebSocket = (config: WebSocketConfig): WebSocketState => {
     setFilters,
     clearLogs,
     requestHistory,
+    sendCommand,
   };
 };

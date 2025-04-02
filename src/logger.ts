@@ -11,6 +11,8 @@ import type {
   WebSocketMessage,
   MonitoringConfig,
   PerformanceMetrics,
+  UserAction,
+  CommandData,
 } from "./types/type";
 import crypto from "crypto";
 import {
@@ -54,7 +56,7 @@ export class NehonixSmartLogger extends EventEmitter {
   private analyzer: LogAnalyzer;
   private wsClient: WebSocket | null = null;
   private reconnectAttempts: number = 0;
-  private readonly maxReconnectAttempts: number = 5;
+  private readonly maxReconnectAttempts: number = 20;
   private readonly reconnectDelay: number = 3000;
   private userId?: string;
   private userUid?: string;
@@ -63,6 +65,9 @@ export class NehonixSmartLogger extends EventEmitter {
   private monitoringService: PerformanceMonitoringService;
   private config: NSL_CONFIG | null = null;
   private configPath: string = "";
+  private isAuthenticated: boolean = false;
+  private pendingLogs: LogEntry[] = [];
+  private isRemoteMode: boolean = false;
 
   private constructor() {
     super();
@@ -70,7 +75,8 @@ export class NehonixSmartLogger extends EventEmitter {
     this.analyzer = LogAnalyzer.getInstance();
     this.persistenceService = LogPersistenceService.getInstance();
     this.monitoringService = PerformanceMonitoringService.getInstance();
-    this.connectToWebSocket();
+    /*activation des commandes par défaut*/
+    //Activation de l'affichage des logs dans la console
   }
 
   public static from(configPath: string): NehonixSmartLogger {
@@ -95,6 +101,7 @@ export class NehonixSmartLogger extends EventEmitter {
         LOG_LEVELS[
           this.config.logLevel?.toLowerCase() as keyof LOG_LEVELS_TYPE
         ] || LOG_LEVELS.debug;
+      this.isRemoteMode = true;
       this.setCredentials(this.config.user.userId, this.config.app.appId);
       return this;
     } catch (error) {
@@ -128,18 +135,17 @@ export class NehonixSmartLogger extends EventEmitter {
   }
 
   private connectToWebSocket(): void {
+    // Ne tenter la connexion que si nous sommes en mode distant
+    if (!this.isRemoteMode) {
+      return;
+    }
+
     try {
       this.wsClient = new WebSocket(NHX_CONFIG._global_.__WEBSOCKET_URL__);
 
       this.wsClient.on("open", () => {
         console.log("NehonixSmartLogger connecté au serveur WebSocket");
         this.reconnectAttempts = 0;
-        if (!this.userId || !this.appId) {
-          throw new Error(
-            "Fill your credentials to connect to the server, use the setCredentials method or import a config file"
-          );
-        }
-
         this.authenticate();
       });
 
@@ -148,14 +154,14 @@ export class NehonixSmartLogger extends EventEmitter {
       });
 
       this.wsClient.on("error", (error) => {
-        throw new Error("Error while connecting to the WebSocket: " + error);
+        console.error("Error while connecting to the WebSocket:", error);
       });
 
       this.wsClient.on("close", () => {
         this.handleReconnect();
       });
     } catch (error) {
-      throw new Error("Error while connecting to the WebSocket: " + error);
+      console.error("Error while connecting to the WebSocket:", error);
     }
   }
 
@@ -170,10 +176,10 @@ export class NehonixSmartLogger extends EventEmitter {
   }
 
   private authenticate(): void {
-    console.log("Authentificating with: ", {
-      userId: this.userId,
-      appId: this.appId,
-    });
+    // console.log("Authentificating with: ", {
+    //   userId: this.userId,
+    //   appId: this.appId,
+    // });
     if (
       this.wsClient?.readyState === WebSocket.OPEN &&
       this.userId &&
@@ -191,8 +197,13 @@ export class NehonixSmartLogger extends EventEmitter {
   }
 
   private handleMessage(message: WebSocketResponse): void {
-    console.log("got message", message);
+    // console.log(
+    //   chalk.cyanBright("Message received: ", JSON.stringify(message))
+    // );
     switch (message.type) {
+      case "clear":
+        this.clearLogs();
+        break;
       case "logs":
         if (message.payload.logs) {
           this.handleLogs(message.payload.logs);
@@ -208,10 +219,124 @@ export class NehonixSmartLogger extends EventEmitter {
           this.setCredentials(message.payload.userId, message.payload.appId);
         }
         break;
-      // case "auth_success":
-      //   break;
+      case "auth_success":
+        console.log(
+          `Server connected to ${this.appId} for ${message.payload.userId}`
+        );
+        this.isAuthenticated = true;
+        // Envoyer les logs en attente
+        this.processPendingLogs();
+        // Demander l'historique des logs
+        this.requestHistory();
+        break;
       case "auth_error":
+        this.isAuthenticated = false;
         throw new Error("Auth error: " + message.payload.message);
+      case "command":
+        this.handleCommand((message as any).data as CommandData);
+        break;
+      case "request_history":
+        console.log(
+          chalk.yellowBright("History logs: ", message.payload?.logs)
+        );
+        this.handleHistory(message.payload?.logs || []);
+        break;
+      case "get_last_actions":
+        this.handleLastActions(message.payload as UserAction[]);
+    }
+  }
+
+  private handleLastActions(actions: UserAction[]) {
+    // console.log(chalk.cyanBright("Last actions: ", JSON.stringify(actions)));
+    actions.forEach((action) => {
+      this.handleCommand(action.data);
+    });
+  }
+  /***  ws_sent_config?: {
+    response_type?: string;
+  }; */
+  private requestHistory(): void {
+    if (this.wsClient?.readyState === WebSocket.OPEN) {
+      const historyMessage: WebSocketMessage = {
+        type: "history",
+        ws_sent_config: {
+          response_type: "request_history",
+        },
+        data: {
+          userId: this.userId || "",
+          appId: this.appId || "",
+        },
+      };
+      this.wsClient.send(JSON.stringify(historyMessage));
+    }
+  }
+  private handleHistory(logs: LogEntry[]): void {
+    this.emit("history", logs);
+  }
+
+  private handleCommand(payload: CommandData): void {
+    // console.log(
+    //   chalk.yellowBright("🔍 Commande reçue:", JSON.stringify(payload))
+    // );
+    switch (payload.type) {
+      case "console_toggle":
+        this.handleConsoleToggle(payload.data.enabled);
+        break;
+      case "encryption_toggle":
+        this.handleEncryptionToggle(payload.data.enabled);
+        break;
+      default:
+        console.warn("Commande inconnue:", payload.type);
+    }
+  }
+
+  private handleConsoleToggle(enabled: boolean): void {
+    if (!this.config) return;
+
+    const currentConsole = this.config.console ?? {
+      showTimestamp: true,
+      showLogLevel: true,
+      colorized: true,
+      format: "detailed",
+    };
+
+    this.config = {
+      ...this.config,
+      console: {
+        ...currentConsole,
+        enabled,
+      },
+    };
+    console.log(`Affichage console ${enabled ? "activé" : "désactivé"}`);
+  }
+
+  private handleEncryptionToggle(enabled: boolean): void {
+    if (!this.config) return;
+
+    this.config = {
+      ...this.config,
+      encryption: {
+        enabled,
+        key: enabled ? this.config.app.apiKey : undefined,
+      },
+    };
+    console.log(`Chiffrement des logs ${enabled ? "activé" : "désactivé"}`);
+  }
+
+  private processPendingLogs(): void {
+    while (this.pendingLogs.length > 0) {
+      const logEntry = this.pendingLogs.shift();
+      if (logEntry) {
+        this.sendLogToWebSocket(logEntry);
+        // Afficher dans la console maintenant que nous sommes authentifiés
+        const coloredMessage = this.getColoredMessage(
+          this.formatMessage(logEntry.timestamp, logEntry.level, [
+            logEntry.message,
+          ]),
+          logEntry.level
+        );
+        this.writeToConsole(coloredMessage, logEntry.level);
+      }
     }
   }
 
@@ -225,10 +350,6 @@ export class NehonixSmartLogger extends EventEmitter {
     this.emit("metrics", metrics);
   }
 
-  private handleHistory(logs: LogEntry[]): void {
-    this.emit("history", logs);
-  }
-
   private handleClear(): void {
     this.emit("clear");
   }
@@ -236,6 +357,9 @@ export class NehonixSmartLogger extends EventEmitter {
   public setCredentials(userId: string, appId: string): void {
     this.userId = userId;
     this.appId = appId;
+    this.isRemoteMode = true;
+    // Initier la connexion WebSocket seulement quand les credentials sont définis
+    this.connectToWebSocket();
     if (this.wsClient?.readyState === WebSocket.OPEN) {
       this.authenticate();
     }
@@ -292,6 +416,8 @@ export class NehonixSmartLogger extends EventEmitter {
   }
 
   private writeToConsole(message: string, level: string): void {
+    if (!this.config?.console?.enabled) return;
+
     switch (level.toLowerCase()) {
       case "error":
         console.error(message);
@@ -400,7 +526,7 @@ export class NehonixSmartLogger extends EventEmitter {
     const formattedMessage = this.formatMessage(timestamp, logLevel, messages);
     const coloredMessage = this.getColoredMessage(formattedMessage, logLevel);
 
-    // Créer l'entrée de log pour le WebSocket
+    // Créer l'entrée de log
     const logEntry: LogEntry = {
       id: crypto.randomBytes(16).toString("hex"),
       timestamp,
@@ -411,55 +537,63 @@ export class NehonixSmartLogger extends EventEmitter {
       metadata: messages.find((m) => typeof m === "object") as
         | Record<string, unknown>
         | undefined,
-      // appId: this.appId || "",
-      // userId: this.userId || "",
     };
 
-    // Envoyer le log au WebSocket
-    this.sendLogToWebSocket(logEntry);
+    // Mode distant avec authentification requise
+    if (this.isRemoteMode) {
+      if (!this.isAuthenticated) {
+        this.pendingLogs.push(logEntry);
+        return;
+      }
+      this.sendLogToWebSocket(logEntry);
+    }
 
-    // Analyse du message
-    const insights = this.analyzer.analyze(formattedMessage, timestamp, {
-      level: logLevel,
-      options,
-    });
-
-    // Si des insights sont trouvés et que le niveau est error ou warn
-    if (insights.length > 0 && (logLevel === "error" || logLevel === "warn")) {
-      const suggestions = this.analyzer.generateSuggestions();
-      if (suggestions.length > 0) {
-        console.log(chalk.cyan("\n🔍 Analyse des logs:"));
-        suggestions.forEach((suggestion) =>
-          console.log(chalk.yellow(suggestion))
-        );
+    // Affichage dans la console (toujours en mode local, ou si authentifié en mode distant)
+    if (!this.isRemoteMode || this.isAuthenticated) {
+      if (!options.logMode?.enable || options.logMode?.display_log) {
+        this.writeToConsole(coloredMessage, logLevel);
       }
 
-      const anomalies = this.analyzer.detectAnomalies();
-      if (anomalies.length > 0) {
-        console.log(chalk.red("\n⚡ Anomalies détectées:"));
-        anomalies.forEach((anomaly) => {
-          console.log(
-            chalk.magenta(
-              `   - Type: ${anomaly.type}\n` +
-                `     Fréquence: ${anomaly.frequency}x en 5 minutes\n` +
-                `     Catégorie: ${anomaly.category}\n` +
-                `     Sévérité: ${anomaly.severity}`
-            )
+      // Analyse du message
+      const insights = this.analyzer.analyze(formattedMessage, timestamp, {
+        level: logLevel,
+        options,
+      });
+
+      if (
+        insights.length > 0 &&
+        (logLevel === "error" || logLevel === "warn")
+      ) {
+        const suggestions = this.analyzer.generateSuggestions();
+        if (suggestions.length > 0) {
+          console.log(chalk.cyan("\n Logs analysing...:"));
+          suggestions.forEach((suggestion) =>
+            console.log(chalk.yellow(suggestion))
           );
-        });
+        }
+
+        const anomalies = this.analyzer.detectAnomalies();
+        if (anomalies.length > 0) {
+          console.log(chalk.red("\n Detected anomaly:"));
+          anomalies.forEach((anomaly) => {
+            console.log(
+              chalk.magenta(
+                `   - Type: ${anomaly.type}\n` +
+                  `     Frequences: ${anomaly.frequency}x in 5 minutes\n` +
+                  `     Category: ${anomaly.category}\n` +
+                  `     Severity: ${anomaly.severity}`
+              )
+            );
+          });
+        }
       }
-    }
 
-    // Affichage dans la console
-    if (!options.logMode?.enable || options.logMode?.display_log) {
-      this.writeToConsole(coloredMessage, logLevel);
-    }
-
-    // Écriture dans le fichier
-    if (options.logMode?.enable) {
-      const logName = formatLogFileName(options.logMode.name || "app");
-      const logPath = path.join(process.cwd(), "logs", logName);
-      this.writeToFile(logPath, formattedMessage, options, timestamp);
+      // Écriture dans le fichier
+      if (options.logMode?.enable) {
+        const logName = formatLogFileName(options.logMode.name || "app");
+        const logPath = path.join(process.cwd(), "logs", logName);
+        this.writeToFile(logPath, formattedMessage, options, timestamp);
+      }
     }
   }
 
@@ -484,7 +618,7 @@ export class NehonixSmartLogger extends EventEmitter {
 
   private sendLogToWebSocket(logEntry: LogEntry): void {
     if (this.wsClient?.readyState === WebSocket.OPEN) {
-      console.log("sendLogToWebSocket", logEntry);
+      // console.log("sendLogToWebSocket", logEntry);
       const message: WebSocketMessage = {
         type: "logs",
         data: {

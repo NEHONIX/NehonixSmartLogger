@@ -414,7 +414,11 @@ export type SocketResponseType =
   | "auth_error"
   | "logs"
   | "metrics"
-  | "filter";
+  | "filter"
+  | "clear"
+  | "request_history"
+  | "command"
+  | "get_last_actions";
 
 export interface LOG_LEVELS_TYPE {
   none: number;
@@ -808,6 +812,9 @@ export type WebSocketResponse = {
 
 export interface WebSocketMessage {
   type: LogType;
+  ws_sent_config?: {
+    response_type?: string;
+  };
   data?: {
     userId: string;
     appId: string;
@@ -816,3 +823,74 @@ export interface WebSocketMessage {
     metrics?: PerformanceMetrics;
   };
 }
+
+export type WebSocketMessageType =
+  | "auth"
+  | "filter"
+  | "clear"
+  | "command"
+  | "history";
+
+export type WebSocketResponseType =
+  | "connect"
+  | "auth_success"
+  | "auth_error"
+  | "logs"
+  | "metrics"
+  | "command_response";
+
+export type commandType = "console_toggle" | "encryption_toggle";
+export interface WebSocketCommand {
+  type: commandType;
+  data: {
+    enabled: boolean;
+    key?: string;
+  };
+}
+
+export interface CommandData {
+  type: commandType;
+  data: any;
+  userId: string;
+  appId: string;
+}
+
+export interface UserAction {
+  id: string;
+  userId: string;
+  appId: string;
+  type: commandType;
+  data: CommandData;
+  timestamp: number;
+  status: "success" | "error" | "pending";
+  metadata?: {
+    ipAddress?: string;
+    userAgent?: string;
+    platform?: string;
+  };
+}
+
+// export interface WebSocketMessage {
+//   type: WebSocketMessageType;
+//   data: {
+//     userId: string;
+//     appId: string;
+//     level?: string[];
+//     logs?: LogEntry[];
+//     type?: string;
+//     data?: any;
+//   };
+// }
+
+// export interface WebSocketResponse {
+//   type: WebSocketResponseType;
+//   payload: {
+//     appId?: string;
+//     userId?: string;
+//     message?: string;
+//     logs?: LogEntry[];
+//     metrics?: PerformanceMetrics;
+//     success?: boolean;
+//     data?: any;
+//   };
+// }

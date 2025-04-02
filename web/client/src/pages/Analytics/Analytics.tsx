@@ -36,7 +36,6 @@ const Analytics: React.FC = () => {
     appId: appId || "",
     userId: user?.uid || "",
     onLogs: (newLogs) => setLogs((prev) => [...prev, ...newLogs]),
-    onMetrics: setMetrics,
   });
 
   useEffect(() => {

@@ -25,16 +25,10 @@ export const LogViewer: React.FC<LogViewerProps> = ({ wsUrl }) => {
 
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      console.log("🔍 Message reçu:", data);
       switch (data.type) {
         case "logs":
-          console.log("🔍 Logs reçus:", data.payload.logs);
-          setLogs(data.payload.logs);
-          break;
         case "history":
-          if (data.payload?.logs) {
-            setLogs((prevLogs) => [...prevLogs, ...data.payload.logs]);
-          }
+          setLogs((prevLogs) => [...prevLogs, ...data.data]);
           break;
         case "clear":
           setLogs([]);

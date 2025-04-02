@@ -5,7 +5,7 @@
   "app": {
     "provider": "nehonix",
     "apiKey": "nehonix@b4e35fc5c064a660bacfe257e720e3c1aee98332e8c8dbc7cdb904e53d1e6da6.nsl",
-    "appId": "38e3c785-2651-4a70-b5bf-8187dcd3d3c1",
+    "appId": "e2afc195-b6f5-479c-bad3-4df8f7af39c4",
     "name": "App with description"
   },
   "logLevel": "debug",

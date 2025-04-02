@@ -1141,3 +1141,26 @@ export interface TimeRange {
   end: string;
   type: "hour" | "day" | "week";
 }
+
+export type commandType = "console_toggle" | "encryption_toggle";
+export interface CommandData {
+  type: commandType;
+  data: any;
+  userId: string;
+  appId: string;
+}
+
+export interface UserAction {
+  id: string;
+  userId: string;
+  appId: string;
+  type: commandType;
+  data: CommandData;
+  timestamp: number;
+  status: "success" | "error" | "pending";
+  metadata?: {
+    ipAddress?: string;
+    userAgent?: string;
+    platform?: string;
+  };
+}

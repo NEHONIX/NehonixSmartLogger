@@ -1,0 +1,32 @@
+[
+  {
+    "appId": "e2afc195-b6f5-479c-bad3-4df8f7af39c4",
+    "data": {
+      "appId": "e2afc195-b6f5-479c-bad3-4df8f7af39c4",
+      "data": { "enabled": false },
+      "type": "console_toggle",
+      "userId": "nehonix_719d48ac-35a6-4931-83d4-4ae52b8c7d38"
+    },
+    "id": "fdf1fa51-7946-4a93-9a7e-0da255b3818b",
+    "metadata": { "ipAddress": "::1" },
+    "status": "success",
+    "timestamp": 1743617208926,
+    "type": "console_toggle",
+    "userId": "nehonix_719d48ac-35a6-4931-83d4-4ae52b8c7d38"
+  },
+  {
+    "appId": "e2afc195-b6f5-479c-bad3-4df8f7af39c4",
+    "data": {
+      "appId": "e2afc195-b6f5-479c-bad3-4df8f7af39c4",
+      "data": { "enabled": true },
+      "type": "encryption_toggle",
+      "userId": "nehonix_719d48ac-35a6-4931-83d4-4ae52b8c7d38"
+    },
+    "id": "ffbe0b76-b04a-4efb-8c69-eff97ecc3038",
+    "metadata": { "ipAddress": "::1" },
+    "status": "success",
+    "timestamp": 1743617203879,
+    "type": "encryption_toggle",
+    "userId": "nehonix_719d48ac-35a6-4931-83d4-4ae52b8c7d38"
+  }
+]

@@ -16,12 +16,12 @@ Une bibliothèque de logging intelligente et sécurisée avec interface de suivi
 
 ## Fonctionnalités
 
-- 🔄 **Logging en temps réel** avec interface web de suivi
-- 🔒 **Chiffrement des logs** pour données sensibles
-- 🎛️ **Configuration à distance** des niveaux et comportements de log
-- 📊 **Métriques de performance** et détection d'anomalies
-- 💾 **Persistance configurable** des logs
-- 🌐 **Mode hors ligne** avec synchronisation automatique
+- **Logging en temps réel** avec interface web de suivi
+- **Chiffrement des logs** pour données sensibles
+- **Configuration à distance** des niveaux et comportements de log
+- **Métriques de performance** et détection d'anomalies
+- **Persistance configurable** des logs
+- **Mode hors ligne** avec synchronisation automatique
 
 ## Installation
 
@@ -35,7 +35,7 @@ yarn add nehonix-logger
 
 ### 1. Configuration basique
 
-Créez un fichier `nehonix.config.json` :
+Créez un fichier `nehonix.config.json`:
 
 ```json
 {
@@ -60,12 +60,23 @@ Créez un fichier `nehonix.config.json` :
 import { NehonixSmartLogger } from "nehonix-logger";
 
 // Méthode recommandée : utilisation d'un fichier de configuration
+/**
+ * NOTE: la lecture se fait à la racine du projet exemple:
+ *
+ * -Mon_Projet:
+ *   -src
+ *   -public
+ *   -other
+ *   -config
+ *      - nehonix.config.json
+ *      - autre_config.json
+ */
 const logger = NehonixSmartLogger.from("./config").import(
-  "nehonix.config.json"
+  "nehonix.config.json" //ou autre_config.json si le fichier se trouve par exemple dans src, avancez d'un niveau, exemple: ./src/config ou ./../config
 );
 
 // Alternative : instance unique
-const NSL = NehonixSmartLogger.getInstance();
+const NSL = NehonixSmartLogger.getInstance(); //mais attention, cette méthode ne permet pas la suivie de vos données en temps réelle, elle reste locale.
 ```
 
 ### 3. Utilisation
@@ -92,7 +103,7 @@ logger.log("Transaction effectuée", {
 
 ## Configuration avancée
 
-### Structure complète de configuration
+### Structure complète de configuration (peut changer)
 
 ```typescript
 interface LoggerConfig {
@@ -148,25 +159,28 @@ const logger = NehonixSmartLogger.from("./config").import(
 );
 
 // Les logs sensibles seront automatiquement chiffrés
-logger.log("Données sensibles", {
-  level: "info",
-  encryption: true,
-});
+logger.log(
+  {
+    level: "info",
+    encryption: true,
+  },
+  "Données sensibles"
+);
 ```
 
 ## Interface Web
 
 L'interface web offre :
 
-- 📊 Dashboard en temps réel
-- 🔍 Filtrage et recherche avancée des logs
-- 📈 Visualisation des métriques de performance
-- ⚙️ Configuration à distance des comportements de log
-- 🔔 Système d'alertes et notifications
+- Dashboard en temps réel
+- Filtrage et recherche avancée des logs
+- Visualisation des métriques de performance
+- Configuration à distance des comportements de log
+- Système d'alertes et notifications
 
 ### Accès à l'interface
 
-1. Créez un compte sur [https://console.nehonix.com](https://console.nehonix.com)
+1. Créez un compte sur [https://console.nehonix.space](https://console.nehonix.space)
 2. Ajoutez votre application
 3. Récupérez vos identifiants (apiKey, appId)
 4. Configurez votre logger avec ces identifiants
@@ -223,4 +237,4 @@ Les contributions sont les bienvenues ! Consultez notre [guide de contribution](
 
 ## Licence
 
-MIT © [Nehonix](https://nehonix.com)
+MIT © [Nehonix](https://nehonix.space)

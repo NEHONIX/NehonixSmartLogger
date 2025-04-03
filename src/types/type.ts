@@ -796,6 +796,7 @@ export interface LogEntry {
     requestId?: string;
     [key: string]: any;
   };
+  encrypted?: boolean;
 }
 
 export type WebSocketResponse = {
@@ -811,16 +812,21 @@ export type WebSocketResponse = {
 };
 
 export interface WebSocketMessage {
-  type: LogType;
-  ws_sent_config?: {
-    response_type?: string;
-  };
+  type: string;
   data?: {
-    userId: string;
-    appId: string;
+    userId?: string;
+    appId?: string;
     level?: string[];
     logs?: LogEntry[];
     metrics?: PerformanceMetrics;
+    encryption?: {
+      isEncrypted: boolean;
+      transmissionKey: string;
+      encryptedKey: string;
+    };
+  };
+  ws_sent_config?: {
+    response_type?: string;
   };
 }
 

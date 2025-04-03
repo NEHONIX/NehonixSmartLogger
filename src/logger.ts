@@ -29,6 +29,7 @@ import {
   LogRotationConfig,
 } from "./services/LogPersistenceService";
 import { PerformanceMonitoringService } from "./services/PerformanceMonitoringService";
+import { EncryptionService } from "./services/EncryptionService";
 
 // Niveaux de log disponibles
 const LOG_LEVELS: LOG_LEVELS_TYPE = {
@@ -63,6 +64,7 @@ export class NehonixSmartLogger extends EventEmitter {
   private appId?: string;
   private persistenceService: LogPersistenceService;
   private monitoringService: PerformanceMonitoringService;
+  private encryptionService: EncryptionService;
   private config: NSL_CONFIG | null = null;
   private configPath: string = "";
   private isAuthenticated: boolean = false;
@@ -75,6 +77,7 @@ export class NehonixSmartLogger extends EventEmitter {
     this.analyzer = LogAnalyzer.getInstance();
     this.persistenceService = LogPersistenceService.getInstance();
     this.monitoringService = PerformanceMonitoringService.getInstance();
+    this.encryptionService = EncryptionService.getInstance();
     /*activation des commandes par défaut*/
     //Activation de l'affichage des logs dans la console
   }
@@ -313,11 +316,16 @@ export class NehonixSmartLogger extends EventEmitter {
   private handleEncryptionToggle(enabled: boolean): void {
     if (!this.config) return;
 
+    // Si on active le chiffrement et qu'il n'y a pas de clé, en générer une
+    const key = enabled
+      ? this.config.encryption?.key || this.encryptionService.generateKey
+      : undefined;
+
     this.config = {
       ...this.config,
       encryption: {
         enabled,
-        key: enabled ? this.config.app.apiKey : undefined,
+        key,
       },
     };
     console.log(`Chiffrement des logs ${enabled ? "activé" : "désactivé"}`);
@@ -416,6 +424,18 @@ export class NehonixSmartLogger extends EventEmitter {
   }
 
   private writeToConsole(message: string, level: string): void {
+    // Si le chiffrement est activé, chiffrer le message
+    if (this.config?.encryption?.enabled && this.config.encryption.key) {
+      const key = this.config.encryption.key;
+      try {
+        message = this.encryptionService.encrypt(message, key);
+      } catch (error) {
+        console.error("Error while encrypting message:", error);
+        throw new Error("Error while encrypting message:" + error);
+      }
+    }
+
+    // Si l'affichage console est désactivé, ne rien afficher
     if (!this.config?.console?.enabled) return;
 
     switch (level.toLowerCase()) {
@@ -445,37 +465,25 @@ export class NehonixSmartLogger extends EventEmitter {
     try {
       if (options.logMode?.enable) {
         const rotationConfig: LogRotationConfig = {
-          maxSize: options.logMode.maxSize || 100, // 100MB par défaut
+          maxSize: options.logMode.maxSize || 100,
           maxFiles: options.logMode.maxFiles || 10,
           compress: options.logMode.compress || false,
           interval: options.logMode.rotationInterval || "daily",
         };
+
+        // Si le chiffrement est activé, chiffrer le message avant de l'écrire
+        if (this.config?.encryption?.enabled && this.config.encryption.key) {
+          message = this.encryptionService.encrypt(
+            message,
+            this.config.encryption.key
+          );
+        }
 
         await this.persistenceService.writeLog(
           logPath,
           message,
           rotationConfig
         );
-      }
-
-      // Chiffrement si nécessaire
-      if (options.logMode?.crypt?.CRYPT_DATAS?.lockStatus === "enable") {
-        const { key, iv = Buffer.alloc(16, 0) } =
-          options.logMode.crypt.CRYPT_DATAS;
-
-        if (key) {
-          const cipher = crypto.createCipheriv(
-            "aes-256-cbc",
-            Buffer.from(key, "hex"),
-            iv
-          );
-
-          let encryptedMessage = cipher.update(message, "utf8", "hex");
-          encryptedMessage += cipher.final("hex");
-
-          const encryptedPath = `${logPath}.enc`;
-          fs.appendFileSync(encryptedPath, `${encryptedMessage}\n`);
-        }
       }
     } catch (error) {
       console.error(chalk.red("Error while writing to log file:", error));
@@ -549,6 +557,9 @@ export class NehonixSmartLogger extends EventEmitter {
     }
 
     // Affichage dans la console (toujours en mode local, ou si authentifié en mode distant)
+    /**
+     * coloredMessage, logLevel
+     */
     if (!this.isRemoteMode || this.isAuthenticated) {
       if (!options.logMode?.enable || options.logMode?.display_log) {
         this.writeToConsole(coloredMessage, logLevel);
@@ -618,13 +629,46 @@ export class NehonixSmartLogger extends EventEmitter {
 
   private sendLogToWebSocket(logEntry: LogEntry): void {
     if (this.wsClient?.readyState === WebSocket.OPEN) {
-      // console.log("sendLogToWebSocket", logEntry);
+      // Préparer les métadonnées de chiffrement si nécessaire
+      let encryptionMetadata = undefined;
+
+      if (this.config?.encryption?.enabled && this.config.encryption.key) {
+        // Générer une clé temporaire unique pour cette transmission
+        const transmissionKey = this.encryptionService.generateKey;
+
+        // Chiffrer la clé de chiffrement originale avec la clé temporaire
+        const encryptedKey = this.encryptionService.encrypt(
+          this.config.encryption.key,
+          transmissionKey
+        );
+
+        // Chiffrer le message avec la clé originale
+        const encryptedMessage = this.encryptionService.encrypt(
+          logEntry.message,
+          this.config.encryption.key
+        );
+
+        // Mettre à jour le message et ajouter les métadonnées
+        logEntry = {
+          ...logEntry,
+          message: encryptedMessage,
+          encrypted: true,
+        };
+
+        encryptionMetadata = {
+          isEncrypted: true,
+          transmissionKey,
+          encryptedKey,
+        };
+      }
+
       const message: WebSocketMessage = {
         type: "logs",
         data: {
           userId: this.userId || "",
           appId: this.appId || "",
           logs: [logEntry],
+          encryption: encryptionMetadata,
         },
       };
       this.wsClient.send(JSON.stringify(message));

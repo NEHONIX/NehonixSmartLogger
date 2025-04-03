@@ -16,7 +16,7 @@ export const USE_DEFAULT_LOGGER: SERVER_LOGGER_PROPS = {
         iv: Buffer.alloc(16, 0),
       },
       CRYPT_LOGS: {
-        isLocked: false,
+        lockStatus: "disable",
         iv: Buffer.alloc(16, 0),
       },
     },
@@ -50,7 +50,8 @@ export const createLoggerConfig = (
           iv: config?.logMode?.crypt?.CRYPT_DATAS?.iv || Buffer.alloc(16, 0),
         },
         CRYPT_LOGS: {
-          isLocked: config?.logMode?.crypt?.CRYPT_LOGS?.isLocked || false,
+          lockStatus:
+            config?.logMode?.crypt?.CRYPT_LOGS?.lockStatus || "disable",
           key: config?.logMode?.crypt?.CRYPT_LOGS?.key,
           iv: config?.logMode?.crypt?.CRYPT_LOGS?.iv || Buffer.alloc(16, 0),
         },

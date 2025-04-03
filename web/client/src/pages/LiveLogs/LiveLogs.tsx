@@ -19,9 +19,9 @@ export const LiveLogs: React.FC = () => {
 
   useSetPageTitle({
     title: `${NHX_CONFIG._app_info_.__SHORT_NAME}  ●  ${
-      app?.name || "Logs en temps réel"
+      app?.name || "Realtime Logs"
     }`,
-    description: "Visualisation des logs en temps réel",
+    description: "Realtime logs viewer",
   });
 
   if (isLoading) {

@@ -17,12 +17,13 @@ export interface Command {
   data: any;
 }
 
-interface WebSocketState {
+export interface WebSocketState {
   isConnected: boolean;
   isAuthenticated: boolean;
   setFilters: (filters: { appId: string; level?: string[] }) => void;
   clearLogs: () => void;
   requestHistory: () => void;
+  connectionError?: string;
   sendCommand: (command: Command) => void;
 }
 

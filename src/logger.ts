@@ -13,13 +13,10 @@ import type {
   PerformanceMetrics,
   UserAction,
   CommandData,
+  ConsoleConfig,
 } from "./types/type";
 import crypto from "crypto";
-import {
-  USE_DEFAULT_LOGGER,
-  createLoggerConfig,
-  formatLogFileName,
-} from "./utils/logger.util";
+import { formatLogFileName, LoggerConfig as lgc } from "./utils/logger.util";
 import { LogAnalyzer } from "./analytics/LogAnalyzer";
 import { EventEmitter } from "events";
 import WebSocket from "ws";
@@ -295,13 +292,15 @@ export class NehonixSmartLogger extends EventEmitter {
 
   private handleConsoleToggle(enabled: boolean): void {
     if (!this.config) return;
-
-    const currentConsole = this.config.console ?? {
+    const defaultConsole: ConsoleConfig = {
       showTimestamp: true,
       showLogLevel: true,
       colorized: true,
       format: "detailed",
+      enabled: true,
     };
+
+    const currentConsole = this.config.console ?? defaultConsole;
 
     this.config = {
       ...this.config,
@@ -413,7 +412,31 @@ export class NehonixSmartLogger extends EventEmitter {
         typeof m === "object" ? JSON.stringify(m, null, 2) : String(m)
       )
       .join(" ");
-    return `[${timestamp}] [${level.toUpperCase()}]: ${messageText}`;
+
+    // En mode local ou sans configuration, utiliser le format par défaut
+    if (!this.isRemoteMode || !this.config) {
+      return `[${timestamp}] [${level.toUpperCase()}] ${messageText}`;
+    }
+
+    // En mode distant avec configuration
+    const cslConfig = this.config.console;
+    const parts = [];
+
+    if (cslConfig?.showTimestamp) {
+      parts.push(`[${timestamp}]`);
+    }
+
+    if (cslConfig?.showLogLevel) {
+      parts.push(`[${level.toUpperCase()}]`);
+    }
+
+    parts.push(
+      cslConfig?.colorized
+        ? this.getColoredMessage(messageText, level)
+        : messageText
+    );
+
+    return parts.join(" ");
   }
 
   private getColoredMessage(message: string, level: string): string {
@@ -435,8 +458,8 @@ export class NehonixSmartLogger extends EventEmitter {
       }
     }
 
-    // Si l'affichage console est désactivé, ne rien afficher
-    if (!this.config?.console?.enabled) return;
+    // En mode distant, vérifier si l'affichage console est désactivé
+    if (this.isRemoteMode && this.config?.console?.enabled === false) return;
 
     switch (level.toLowerCase()) {
       case "error":
@@ -500,7 +523,7 @@ export class NehonixSmartLogger extends EventEmitter {
   }
 
   public log(...args: unknown[]): void {
-    let options: SERVER_LOGGER_PROPS = USE_DEFAULT_LOGGER;
+    let options: SERVER_LOGGER_PROPS = lgc.USE_DEFAULT_LOGGER;
     let messages: unknown[] = args;
     let logLevel: string = "log";
 
@@ -513,7 +536,7 @@ export class NehonixSmartLogger extends EventEmitter {
         firstArg !== null &&
         ("logMode" in firstArg || "typeOrMessage" in firstArg)
       ) {
-        options = createLoggerConfig(firstArg as SERVER_LOGGER_PROPS);
+        options = lgc.createLoggerConfig(firstArg as SERVER_LOGGER_PROPS);
         messages = args.slice(1);
         logLevel = (options.typeOrMessage as string) || "log";
       } else if (typeof firstArg === "string" && firstArg in LOG_LEVELS) {
@@ -547,24 +570,25 @@ export class NehonixSmartLogger extends EventEmitter {
         | undefined,
     };
 
-    // Mode distant avec authentification requise
+    // Gestion du mode distant
     if (this.isRemoteMode) {
       if (!this.isAuthenticated) {
+        // En mode distant non authentifié, stocker les logs pour envoi ultérieur
         this.pendingLogs.push(logEntry);
-        return;
+      } else {
+        // En mode distant authentifié, envoyer au WebSocket
+        this.sendLogToWebSocket(logEntry);
       }
-      this.sendLogToWebSocket(logEntry);
     }
 
-    // Affichage dans la console (toujours en mode local, ou si authentifié en mode distant)
-    /**
-     * coloredMessage, logLevel
-     */
-    if (!this.isRemoteMode || this.isAuthenticated) {
-      if (!options.logMode?.enable || options.logMode?.display_log) {
-        this.writeToConsole(coloredMessage, logLevel);
-      }
+    // Toujours afficher dans la console en mode local
+    // En mode distant, afficher uniquement si authentifié ou si pas de configuration spécifique
+    if (!this.isRemoteMode || !options.logMode?.enable) {
+      this.writeToConsole(coloredMessage, logLevel);
+    }
 
+    // Analyse et gestion des logs locaux
+    if (!this.isRemoteMode || this.isAuthenticated) {
       // Analyse du message
       const insights = this.analyzer.analyze(formattedMessage, timestamp, {
         level: logLevel,

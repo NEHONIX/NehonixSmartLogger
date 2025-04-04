@@ -96,7 +96,7 @@ logger.log("Transaction effectuée", {
   metadata: {
     transactionId: "123",
     amount: 100,
-    currency: "EUR",
+    currency: "FCFA",
   },
 });
 ```
@@ -225,9 +225,9 @@ disableEncryption(): void
 
 ```mermaid
 graph TD
-    A[Application Client] -->|WebSocket| B[Backend Server]
+    A[Application Client] -->|WS| B[Backend Server]
     A -->|API REST| B
-    B -->|WebSocket| C[Interface Web]
+    B -->|WS| C[Interface Web]
     B -->|Base de données| D[(DB)]
 ```
 

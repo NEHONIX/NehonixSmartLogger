@@ -25,19 +25,32 @@ export interface WebSocketState {
   requestHistory: () => void;
   connectionError?: string;
   sendCommand: (command: Command) => void;
+  reconnectAttempts: number;
+  reconnect: () => void;
 }
 
 export const useWebSocket = (config: WebSocketConfig): WebSocketState => {
   const [isConnected, setIsConnected] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [reconnectAttempts, setReconnectAttempts] = useState(0);
+  const [connectionError, setConnectionError] = useState<string>();
   const wsRef = useRef<WebSocket | null>(null);
+  const maxReconnectAttempts = 5;
+  const reconnectDelay = 3000;
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  useEffect(() => {
+  const connect = useCallback(() => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      return;
+    }
+
     const ws = new WebSocket(config.wsUrl);
 
     ws.onopen = () => {
       console.log("WebSocket connected");
       setIsConnected(true);
+      setConnectionError(undefined);
+      setReconnectAttempts(0);
       ws.send(
         JSON.stringify({
           type: "auth",
@@ -53,6 +66,20 @@ export const useWebSocket = (config: WebSocketConfig): WebSocketState => {
       console.log("WebSocket disconnected");
       setIsConnected(false);
       setIsAuthenticated(false);
+
+      if (reconnectAttempts < maxReconnectAttempts) {
+        setReconnectAttempts((prev) => prev + 1);
+        setConnectionError(
+          `Tentative de reconnexion ${
+            reconnectAttempts + 1
+          }/${maxReconnectAttempts}...`
+        );
+        reconnectTimeoutRef.current = setTimeout(connect, reconnectDelay);
+      } else {
+        setConnectionError(
+          "Nombre maximum de tentatives de reconnexion atteint. Veuillez réessayer manuellement."
+        );
+      }
     };
 
     ws.onmessage = (event) => {
@@ -84,11 +111,26 @@ export const useWebSocket = (config: WebSocketConfig): WebSocketState => {
     };
 
     wsRef.current = ws;
+  }, [config.wsUrl, config.userId, config.appId, reconnectAttempts]);
 
+  const reconnect = useCallback(() => {
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+    }
+    setReconnectAttempts(0);
+    setConnectionError(undefined);
+    connect();
+  }, [connect]);
+
+  useEffect(() => {
+    connect();
     return () => {
-      ws.close();
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+      wsRef.current?.close();
     };
-  }, [config.wsUrl, config.userId, config.appId]);
+  }, [connect]);
 
   const setFilters = useCallback(
     (filters: { appId: string; level?: string[] }) => {
@@ -157,5 +199,8 @@ export const useWebSocket = (config: WebSocketConfig): WebSocketState => {
     clearLogs,
     requestHistory,
     sendCommand,
+    reconnectAttempts,
+    reconnect,
+    connectionError,
   };
 };

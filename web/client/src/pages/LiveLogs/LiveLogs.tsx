@@ -27,7 +27,7 @@ export const LiveLogs: React.FC = () => {
   if (isLoading) {
     return (
       <div className="live-logs">
-        <div className="loading">Chargement des applications...</div>
+        <div className="loading">Loading apps...</div>
       </div>
     );
   }
@@ -36,7 +36,7 @@ export const LiveLogs: React.FC = () => {
     return (
       <div className="live-logs">
         <div className="no-app-selected">
-          <p>Aucune application sélectionnée</p>
+          <p>No app selected</p>
         </div>
       </div>
     );

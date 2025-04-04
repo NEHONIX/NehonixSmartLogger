@@ -3,7 +3,10 @@ import crypto from "crypto";
 export class EncryptionService {
   private static instance: EncryptionService;
   private algorithm = "aes-256-cbc";
-  private ivLength = 16; // Pour AES, la taille du vecteur d'initialisation est toujours 16
+  /**
+   * bah on va utiliser 16 car pour AES, la taille du vecteur d'initialisation est toujours 16
+   */
+  private ivLength = 16;
 
   private constructor() {}
 

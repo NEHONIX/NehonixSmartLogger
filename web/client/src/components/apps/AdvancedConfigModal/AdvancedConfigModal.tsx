@@ -25,12 +25,50 @@ export const AdvancedConfigModal: React.FC<AdvancedConfigModalProps> = ({
   const [config, setConfig] = useState<CreateAppConfig>(
     initialConfig || defaultAppConfig
   );
+  const [encryptionKeyError, setEncryptionKeyError] = useState<string>("");
 
   const [activeTab, setActiveTab] = useState<
-    "general" | "console" | "persistence" | "network" | "performance"
+    | "general"
+    | "console"
+    | "persistence"
+    | "network"
+    | "performance"
+    | "encryption"
   >("general");
 
+  const validateEncryptionKey = (key: string): boolean => {
+    if (!key) return true; // La clé vide est autorisée (génération automatique)
+
+    // La clé doit être une chaîne hexadécimale de 64 caractères
+    if (!/^[0-9a-f]{64}$/i.test(key)) {
+      setEncryptionKeyError(
+        "La clé doit être une chaîne hexadécimale de 64 caractères (32 octets)"
+      );
+      return false;
+    }
+
+    setEncryptionKeyError("");
+    return true;
+  };
+
+  const handleEncryptionKeyChange = (key: string) => {
+    if (key) {
+      validateEncryptionKey(key);
+    } else {
+      setEncryptionKeyError("");
+    }
+    updateConfig("encryption", {
+      ...config.encryption,
+      key,
+    });
+  };
+
   const handleSave = () => {
+    if (config.encryption.enabled && config.encryption.key) {
+      if (!validateEncryptionKey(config.encryption.key)) {
+        return;
+      }
+    }
     onSave(config);
     onClose();
   };
@@ -194,6 +232,13 @@ export const AdvancedConfigModal: React.FC<AdvancedConfigModalProps> = ({
             onClick={() => setActiveTab("performance")}
           >
             Performance
+          </button>
+
+          <button
+            className={activeTab === "encryption" ? "active" : ""}
+            onClick={() => setActiveTab("encryption")}
+          >
+            Chiffrement
           </button>
         </div>
 
@@ -609,6 +654,45 @@ export const AdvancedConfigModal: React.FC<AdvancedConfigModalProps> = ({
                   </div>
                 </>
               )}
+            </div>
+          )}
+
+          {activeTab === "encryption" && (
+            <div className="tab-content">
+              <div className="form-group">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={config.encryption.enabled}
+                    onChange={(e) =>
+                      updateConfig("encryption", {
+                        enabled: e.target.checked,
+                      })
+                    }
+                  />
+                  Activer le chiffrement des logs
+                </label>
+                <br />
+                <label htmlFor="encryptionKey">
+                  Entrez la clé de chiffrement
+                </label>
+                <input
+                  type="text"
+                  id="encryptionKey"
+                  placeholder="Laissez vide pour une clé générée automatiquement"
+                  value={config.encryption.key || ""}
+                  onChange={(e) => handleEncryptionKeyChange(e.target.value)}
+                  className={encryptionKeyError ? "error" : ""}
+                />
+                {encryptionKeyError && (
+                  <div className="error-message">{encryptionKeyError}</div>
+                )}
+                <div className="help-text">
+                  La clé doit être une chaîne hexadécimale de 64 caractères (32
+                  octets). Laissez vide pour une génération automatique
+                  sécurisée <span style={{ color: "red" }}>(recommandé)</span>.
+                </div>
+              </div>
             </div>
           )}
 

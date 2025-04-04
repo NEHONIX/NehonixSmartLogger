@@ -32,6 +32,7 @@ export const MetricsChart: React.FC<MetricsChartProps> = ({
   metrics,
   timeRange,
 }) => {
+  console.log("metrics in metrics chart", metrics);
   // Vérification de sécurité pour les métriques
   const safeMetrics = {
     cpu: {
@@ -47,10 +48,17 @@ export const MetricsChart: React.FC<MetricsChartProps> = ({
       free: metrics?.disk?.free ?? 0,
     },
     network: {
-      bytesReceived: metrics?.network?.bytesReceived ?? 0,
-      bytesSent: metrics?.network?.bytesSent ?? 0,
+      bytesReceived:
+        metrics?.network?.interfaces?.[
+          Object.keys(metrics.network.interfaces)[0]
+        ]?.bytesReceived ?? 0,
+      bytesSent:
+        metrics?.network?.interfaces?.[
+          Object.keys(metrics.network.interfaces)[0]
+        ]?.bytesSent ?? 0,
     },
   };
+  console.log("safeMetrics in metrics chart", safeMetrics);
 
   const cpuData = {
     labels: ["CPU Usage"],

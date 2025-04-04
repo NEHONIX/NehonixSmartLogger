@@ -1102,28 +1102,49 @@ export interface PerformanceMetrics {
     usage: number;
     cores: number;
     temperature?: number;
+    loadAverage?: number[];
   };
   memory: {
     total: number;
     used: number;
     free: number;
+    usagePercent?: number;
   };
-  disk: {
+  disk?: {
     total: number;
     used: number;
     free: number;
   };
   network: {
-    bytesReceived: number;
-    bytesSent: number;
-    connections: number;
+    interfaces: Record<
+      string,
+      {
+        bytesReceived: number;
+        bytesSent: number;
+        packetsReceived: number;
+        packetsSent: number;
+      }
+    >;
   };
-  processes: {
+  processes?: {
     total: number;
     running: number;
     blocked: number;
   };
-  timestamp: string;
+  process?: {
+    uptime: number;
+    memoryUsage: {
+      rss: number;
+      heapTotal: number;
+      heapUsed: number;
+      external: number;
+      arrayBuffers: number;
+    };
+  };
+  activeConnections?: number;
+  messageRate?: number;
+  errorRate?: number;
+  timestamp?: string;
 }
 
 export interface LogEntry {
@@ -1159,7 +1180,10 @@ export interface TimeRange {
   type: "hour" | "day" | "week";
 }
 
-export type commandType = "console_toggle" | "encryption_toggle";
+export type commandType =
+  | "console_toggle"
+  | "encryption_toggle"
+  | "get_metrics";
 export interface CommandData {
   type: commandType;
   data: any;

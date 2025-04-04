@@ -30,17 +30,33 @@ const Analytics: React.FC = () => {
   const { apps, fetchApps, isLoading: isLoadingApps } = useFecthApps();
   const { user } = useAuth();
 
-  // Connexion WebSocket
-  const { isConnected, setFilters } = useWebSocket({
-    wsUrl: NHX_CONFIG._global_.__WEBSOCKET_URL__,
-    appId: appId || "",
-    userId: user?.uid || "",
-    onLogs: (newLogs) => setLogs((prev) => [...prev, ...newLogs]),
-  });
-
   useEffect(() => {
     console.log("metrics", metrics);
   }, [metrics]);
+
+  // Connexion WebSocket avec gestion des métriques
+  const { isConnected, setFilters, sendCommand, isAuthenticated } =
+    useWebSocket({
+      wsUrl: NHX_CONFIG._global_.__WEBSOCKET_URL__,
+      appId: appId || "",
+      userId: user?.uid || "",
+      onLogs: (newLogs) => setLogs((prev) => [...prev, ...newLogs]),
+      onMetrics: (newMetrics) => {
+        const adaptedMetrics: PerformanceMetrics = {
+          ...newMetrics,
+          disk: {
+            // On multi les valeurs de mémoire comme approximation pour le disque
+            // Multiplier par 10 pour simuler un disque plus grand que la RAM
+            total: newMetrics.memory.total * 10,
+            used: newMetrics.memory.used * 10,
+            free: newMetrics.memory.free * 10,
+          },
+        };
+
+        setMetrics(adaptedMetrics);
+        setLoading(false);
+      },
+    });
 
   useEffect(() => {
     if (!appId) return;
@@ -54,29 +70,18 @@ const Analytics: React.FC = () => {
     description: "Analyse des performances de l'application",
   });
 
-  // Chargement initial des données historiques
+  // Demander les métriques via WebSocket
   useEffect(() => {
-    const fetchHistoricalData = async () => {
-      if (!appId) return;
-
-      try {
-        setLoading(true);
-        const [metricsData, logsData] = await Promise.all([
-          appApi.getMetrics(appId, timeRange.type),
-          appApi.getLogs(appId, timeRange.type),
-        ]);
-
-        setMetrics(metricsData);
-        setLogs(logsData);
-      } catch (error) {
-        console.error("Erreur lors de la récupération des données:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchHistoricalData();
-  }, [appId, timeRange]);
+    if (isConnected && appId) {
+      // Demander les métriques en temps réel
+      sendCommand({
+        type: "get_metrics",
+        data: {
+          timeRange: timeRange.type,
+        },
+      });
+    }
+  }, [isConnected, appId, timeRange.type, sendCommand]);
 
   // Mise à jour des filtres WebSocket
   useEffect(() => {
@@ -146,34 +151,45 @@ const Analytics: React.FC = () => {
             <option value="week">Last week</option>
           </select>
         </div>
+        <div className="app_details">
+          <p>
+            App status:{" "}
+            <span
+              style={{
+                fontWeight: "bold",
+                color: app?.status === "active" ? "green" : "red",
+              }}
+            >
+              {app?.status}
+            </span>
+          </p>
+          <p>
+            Server status:{" "}
+            <span
+              style={{
+                fontWeight: "bold",
+                color: isConnected ? "green" : "red",
+              }}
+            >
+              {isConnected ? "Connected" : "Disconnected"}
+            </span>
+          </p>
+          <p>
+            Auth status:{" "}
+            <span
+              style={{
+                fontWeight: "bold",
+                color: isAuthenticated ? "green" : "red",
+              }}
+            >
+              {isAuthenticated ? "Authenticated" : "Unauthenticated"}
+            </span>
+          </p>
+        </div>
       </div>
 
       <div className="analytics-content">
         <div className="analytics-details">
-          <div className="app_details">
-            <p>
-              App status:{" "}
-              <span
-                style={{
-                  fontWeight: "bold",
-                  color: app?.status === "active" ? "green" : "red",
-                }}
-              >
-                {app?.status}
-              </span>
-            </p>
-            <p>
-              WebSocket status:{" "}
-              <span
-                style={{
-                  fontWeight: "bold",
-                  color: isConnected ? "green" : "red",
-                }}
-              >
-                {isConnected ? "Connected" : "Disconnected"}
-              </span>
-            </p>
-          </div>
           {loading ? (
             <div className="loading">Fetching metrics data...</div>
           ) : (

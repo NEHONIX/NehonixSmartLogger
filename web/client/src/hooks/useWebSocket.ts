@@ -1,5 +1,10 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { commandType, LogEntry, UserAction } from "../types/app";
+import {
+  commandType,
+  LogEntry,
+  UserAction,
+  PerformanceMetrics,
+} from "../types/app";
 
 interface WebSocketConfig {
   wsUrl: string;
@@ -10,6 +15,7 @@ interface WebSocketConfig {
   onAuthError?: (error: string) => void;
   onCommandResponse?: (response: any) => void;
   onActionsUpdate?: (actions: UserAction[]) => void;
+  onMetrics?: (metrics: PerformanceMetrics) => void;
 }
 
 export interface Command {
@@ -99,6 +105,11 @@ export const useWebSocket = (config: WebSocketConfig): WebSocketState => {
         case "history":
           if (message.payload) {
             config.onLogs?.(message.payload);
+          }
+          break;
+        case "metrics":
+          if (message.payload) {
+            config.onMetrics?.(message.payload);
           }
           break;
         case "command_response":

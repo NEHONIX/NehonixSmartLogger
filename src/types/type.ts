@@ -863,6 +863,8 @@ export interface WebSocketMessage {
       /** Clé de chiffrement utilisée pour le message */
       encryptedKey: string;
     };
+    /** Horodatage du message */
+    timestamp?: string;
   };
   /** Configuration envoyée au serveur */
   ws_sent_config?: {

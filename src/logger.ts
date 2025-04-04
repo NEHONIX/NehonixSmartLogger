@@ -102,10 +102,10 @@ export class NehonixSmartLogger extends EventEmitter {
         LOG_LEVELS[
           this.config.logLevel?.toLowerCase() as keyof LOG_LEVELS_TYPE
         ] || LOG_LEVELS.debug;
-      // Ne pas activer le mode remote ici, cela sera fait par enableRemoteMode()
+      // // Ne pas activer le mode remote ici, cela sera fait par enableRemoteMode()
       if (!this.isInitialized) {
-        this.initialize();
         this.isInitialized = true;
+        this.initialize();
       }
       return this;
     } catch (error) {
@@ -153,7 +153,11 @@ export class NehonixSmartLogger extends EventEmitter {
       this.wsClient = new WebSocket(NHX_CONFIG._global_.__WEBSOCKET_URL__);
 
       this.wsClient.on("open", () => {
-        console.log("NehonixSmartLogger connecté au serveur WebSocket");
+        console.log(
+          chalk.greenBright(
+            "Connection successfully established with the NEHONIX server, waiting for authentication..."
+          )
+        );
         this.reconnectAttempts = 0;
         this.authenticate();
       });
@@ -219,9 +223,7 @@ export class NehonixSmartLogger extends EventEmitter {
         }
         break;
       case "metrics":
-        if (message.payload.metrics) {
-          this.handleMetrics(message.payload.metrics);
-        }
+        // Ne plus traiter les métriques reçues du serveur car nous envoyons les nôtres
         break;
       case "connect":
         if (message.payload.appId && message.payload.userId) {
@@ -230,7 +232,10 @@ export class NehonixSmartLogger extends EventEmitter {
         break;
       case "auth_success":
         console.log(
-          `Server connected to ${this.appId} for ${message.payload.userId}`
+          `Server connected to ${this.appId?.slice(
+            0,
+            8
+          )}... for ${message.payload?.userId!.slice(8, 16)}`
         );
         this.isAuthenticated = true;
         // Envoyer les logs en attente
@@ -363,7 +368,26 @@ export class NehonixSmartLogger extends EventEmitter {
   }
 
   private handleMetrics(metrics: PerformanceMetrics): void {
+    // Émettre l'événement localement pour les abonnés directs
     this.emit("metrics", metrics);
+
+    // Envoyer les métriques au serveur WebSocket si nous sommes en mode remote et authentifié
+    if (
+      this.isRemoteMode &&
+      this.isAuthenticated &&
+      this.wsClient?.readyState === WebSocket.OPEN
+    ) {
+      const message: WebSocketMessage = {
+        type: "metrics",
+        data: {
+          userId: this.userId || "",
+          appId: this.appId || "",
+          metrics,
+          timestamp: new Date().toISOString(),
+        },
+      };
+      this.wsClient.send(JSON.stringify(message));
+    }
   }
 
   private handleClear(): void {
@@ -727,6 +751,7 @@ export class NehonixSmartLogger extends EventEmitter {
     this.pendingLogs = [];
     this.isRemoteMode = true;
     this.setCredentials(this.config.user.userId, this.config.app.appId);
+    this.initialize();
     return this;
   }
 

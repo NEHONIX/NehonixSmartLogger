@@ -165,8 +165,10 @@ export const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({
             <div className="stat-item">
               <span className="stat-label">Connexions Réseau</span>
               <span className="stat-value">
-                {metrics?.network?.connections !== undefined
-                  ? metrics.network.connections
+                {metrics?.network?.interfaces !== undefined
+                  ? metrics.network.interfaces[
+                      Object.keys(metrics.network.interfaces)[0]
+                    ].packetsReceived
                   : "N/A"}
               </span>
             </div>
@@ -193,8 +195,10 @@ export const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({
                   Nombre élevé de processus en cours d'exécution
                 </li>
               )}
-            {metrics?.network?.connections !== undefined &&
-              metrics.network.connections > 1000 && (
+            {metrics?.network?.interfaces !== undefined &&
+              metrics.network.interfaces[
+                Object.keys(metrics.network.interfaces)[0]
+              ].packetsReceived > 1000 && (
                 <li className="recommendation-item warning">
                   Nombre élevé de connexions réseau
                 </li>

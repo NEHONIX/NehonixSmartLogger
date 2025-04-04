@@ -3,6 +3,7 @@ import path from "path";
 import { createGzip } from "zlib";
 import { promisify } from "util";
 import { pipeline } from "stream";
+import { EncryptionService } from "./EncryptionService";
 
 const pipelineAsync = promisify(pipeline);
 
@@ -12,6 +13,8 @@ export interface LogRotationConfig {
   compress: boolean;
   interval: "hourly" | "daily" | "weekly";
 }
+
+const enc = EncryptionService.getInstance();
 
 export class LogPersistenceService {
   private static instance: LogPersistenceService;
@@ -125,7 +128,11 @@ export class LogPersistenceService {
 
       // Compression si activée
       if (config.compress) {
-        // TODO: Implémenter la compression
+        const encryptedLog = enc.encrypt(
+          fs.readFileSync(newFilePath, "utf8"),
+          enc.generateKey
+        );
+        fs.writeFileSync(newFilePath, encryptedLog);
       }
 
       // Nettoyage des anciens fichiers

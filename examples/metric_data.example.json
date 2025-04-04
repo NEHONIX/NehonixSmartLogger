@@ -1,0 +1,46 @@
+{
+    "cpu": {
+        "usage": 54.68304530339784,
+        "cores": 4,
+        "loadAverage": [
+            0,
+            0,
+            0
+        ]
+    },
+    "memory": {
+        "total": 8438513664,
+        "used": 7629557760,
+        "free": 808955904,
+        "usagePercent": 90.41352617047798
+    },
+    "process": {
+        "uptime": 4839.3571553,
+        "memoryUsage": {
+            "rss": 39350272,
+            "heapTotal": 4528128,
+            "heapUsed": 4880571,
+            "external": 2064603,
+            "arrayBuffers": 587785
+        }
+    },
+    "network": {
+        "interfaces": {
+            "Wi-Fi": {
+                "bytesReceived": 0,
+                "bytesSent": 0,
+                "packetsReceived": 0,
+                "packetsSent": 0
+            },
+            "Loopback Pseudo-Interface 1": {
+                "bytesReceived": 0,
+                "bytesSent": 0,
+                "packetsReceived": 0,
+                "packetsSent": 0
+            }
+        }
+    },
+    "activeConnections": 2,
+    "messageRate": 0,
+    "errorRate": 0
+}

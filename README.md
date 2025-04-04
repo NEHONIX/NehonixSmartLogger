@@ -9,6 +9,7 @@ Une bibliothèque de logging intelligente et sécurisée avec interface de suivi
 - [Guide de démarrage rapide](#guide-de-démarrage-rapide)
 - [Configuration avancée](#configuration-avancée)
 - [Interface Web](#interface-web)
+- [Monitoring des performances](#monitoring-des-performances)
 - [Sécurité](#sécurité)
 - [API Reference](#api-reference)
 - [Architecture](#architecture)
@@ -226,6 +227,78 @@ L'interface web offre :
 2. Ajoutez votre application
 3. Récupérez vos identifiants (apiKey, appId)
 4. Configurez votre logger avec ces identifiants
+
+## Monitoring des performances
+
+NehonixSmartLogger intègre un système de monitoring des performances qui collecte et transmet automatiquement des métriques sur l'utilisation des ressources de votre application.
+
+### Configuration du monitoring
+
+Activez le monitoring dans votre configuration :
+
+```json
+{
+  "performance": {
+    "enabled": true,
+    "samplingRate": 5000, // Intervalle de collecte en ms
+    "maxEventsPerSecond": 10,
+    "monitorMemory": true,
+    "monitorCPU": true
+  }
+}
+```
+
+### Métriques collectées
+
+Le système collecte les métriques suivantes :
+
+- **CPU** : Utilisation, nombre de cœurs, charge moyenne
+- **Mémoire** : Utilisation totale, mémoire libre, pourcentage d'utilisation
+- **Processus** : Temps de fonctionnement, utilisation de la mémoire du processus
+- **Réseau** : Octets reçus/envoyés, paquets reçus/envoyés par interface
+- **Connexions** : Nombre de connexions actives
+- **Taux de messages** : Fréquence des logs par niveau
+- **Taux d'erreurs** : Fréquence des erreurs
+
+### Flux des métriques
+
+```mermaid
+sequenceDiagram
+    participant App as Application
+    participant Logger as NehonixSmartLogger
+    participant WS as WebSocket
+    participant Server as Serveur Nehonix
+    participant UI as Interface Web
+
+    App->>Logger: Initialisation
+    Logger->>Logger: Configuration du monitoring
+    loop Collecte périodique
+        Logger->>Logger: Collecte des métriques
+        Logger->>WS: Envoi des métriques
+        WS->>Server: Transmission
+        Server->>Server: Stockage
+        Server->>UI: Diffusion en temps réel
+    end
+    UI->>UI: Affichage des graphiques
+    UI->>UI: Détection d'anomalies
+```
+
+### Visualisation des métriques
+
+Dans l'interface web, les métriques sont présentées sous forme de graphiques interactifs :
+
+- **Graphiques en temps réel** : Visualisation des tendances
+- **Vue d'ensemble** : Résumé des performances actuelles
+- **Détection d'anomalies** : Identification des comportements inhabituels
+- **Analyse des logs** : Corrélation entre les logs et les métriques
+
+### Intégration avec les logs
+
+Le système de monitoring est étroitement intégré avec le système de logging :
+
+- Les pics d'utilisation des ressources sont automatiquement associés aux logs correspondants
+- Les anomalies détectées génèrent des logs d'avertissement
+- Les tendances de performance sont analysées pour prédire les problèmes potentiels
 
 ## Sécurité
 

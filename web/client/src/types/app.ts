@@ -900,6 +900,23 @@ export interface CreateAppConfig {
   network?: NetworkConfig;
   /** Configuration du monitoring des performances */
   performance?: PerformanceConfig;
+  /** Configuration du monitoring des performances */
+  monitoring?: MonitoringConfig;
+}
+
+export interface MonitoringConfig {
+  /** Active ou désactive le monitoring */
+  enabled: boolean;
+  /** Taux d'échantillonnage des métriques (0-100%) */
+  samplingRate: number; // 0-100
+  /** Nombre maximum d'événements par seconde */
+  maxEventsPerSecond: number;
+  /** Active le monitoring de la mémoire */
+  monitorMemory: boolean;
+  /** Active le monitoring du CPU */
+  monitorCPU: boolean;
+  /** Active le monitoring du réseau */
+  monitorNetwork: boolean;
 }
 
 /**

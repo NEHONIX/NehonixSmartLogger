@@ -112,8 +112,7 @@ export class NehonixSmartLogger extends EventEmitter {
   }
 
   public async initialize(config: {
-    persistence?: LogRotationConfig;
-    monitoring?: MonitoringConfig;
+    monitoring: MonitoringConfig;
   }): Promise<void> {
     if (this.config) {
       // Mise à jour du niveau de log depuis la configuration
@@ -121,11 +120,19 @@ export class NehonixSmartLogger extends EventEmitter {
         LOG_LEVELS[
           this.config.logLevel?.toLowerCase() as keyof LOG_LEVELS_TYPE
         ] || LOG_LEVELS.debug;
+
+      const persistence: LogRotationConfig = {
+        compress: this.config.persistence?.compressArchives || false,
+        interval: this.config.persistence?.rotationInterval || "daily",
+        maxFiles: this.config.persistence?.maxSize || 1024 * 1024 * 5,
+        maxSize: this.config.persistence?.maxSize || 1024 * 1024 * 5,
+      };
+
+      if (this.config.persistence?.enabled) {
+        await this.persistenceService.initialize(persistence);
+      }
     }
 
-    if (config.persistence) {
-      await this.persistenceService.initialize(config.persistence);
-    }
     if (config.monitoring) {
       await this.monitoringService.initialize(config.monitoring);
       this.monitoringService.on("metrics", (metrics) => {

@@ -364,6 +364,9 @@ export interface AppConfig {
   network?: NetworkConfig;
   /** Configuration du monitoring des performances */
   performance?: PerformanceConfig;
+
+  /** Configuration du monitoring des performances */
+  monitoring?: MonitoringConfig;
 }
 
 /**
@@ -774,58 +777,96 @@ export interface PerformanceMetrics {
 }
 
 export interface MonitoringConfig {
+  /** Active ou désactive le monitoring */
   enabled: boolean;
+  /** Taux d'échantillonnage des métriques (0-100%) */
   samplingRate: number; // 0-100
+  /** Nombre maximum d'événements par seconde */
   maxEventsPerSecond: number;
+  /** Active le monitoring de la mémoire */
   monitorMemory: boolean;
+  /** Active le monitoring du CPU */
   monitorCPU: boolean;
+  /** Active le monitoring du réseau */
   monitorNetwork: boolean;
 }
 
 export interface LogEntry {
+  /** Identifiant unique du log */
   id: string;
+  /** Horodatage du log */
   timestamp: string;
+  /** Niveau de criticité du log */
   level: LogLevel;
+  /** Message principal du log */
   message: string;
+  /** Contexte associé au log */
   context?: Record<string, any>;
+  /** Source du log */
   source?: string;
+  /** Tags associés au log */
   tags?: string[];
+  /** Métadonnées associées au log */
   metadata?: {
+    /** Identifiant unique de l'utilisateur */
     userId?: string;
+    /** Identifiant unique de la session */
     sessionId?: string;
+    /** Identifiant unique de la requête */
     requestId?: string;
+    /** Autres métadonnées */
     [key: string]: any;
   };
+  /** Indique si le log est chiffré */
   encrypted?: boolean;
 }
 
 export type WebSocketResponse = {
+  /** Type de réponse */
   type: SocketResponseType;
-
+  /** Données associées à la réponse */
   payload: {
+    /** Identifiant unique de l'application */
     appId?: string;
+    /** Identifiant unique de l'utilisateur */
     userId?: string;
+    /** Message associé à la réponse */
     message?: string;
+    /** Logs associés à la réponse */
     logs?: LogEntry[];
+    /** Métriques associées à la réponse */
     metrics?: PerformanceMetrics;
   };
 };
 
 export interface WebSocketMessage {
+  /** Type de message */
   type: string;
+  /** Données associées au message */
   data?: {
+    /** Identifiant unique de l'utilisateur */
     userId?: string;
+    /** Identifiant unique de l'application */
     appId?: string;
+    /** Niveaux de log associés au message */
     level?: string[];
+    /** Logs associés au message */
     logs?: LogEntry[];
+    /** Métriques associées au message */
     metrics?: PerformanceMetrics;
+    /** Métadonnées de chiffrement */
     encryption?: {
+      /** Indique si le message est chiffré */
       isEncrypted: boolean;
+      /** Clé de chiffrement utilisée pour la transmission */
       transmissionKey: string;
+      /** Clé de chiffrement utilisée pour le message */
       encryptedKey: string;
     };
   };
+  /** Configuration envoyée au serveur */
   ws_sent_config?: {
+    /** Type de réponse attendue */
     response_type?: string;
   };
 }
@@ -847,31 +888,48 @@ export type WebSocketResponseType =
 
 export type commandType = "console_toggle" | "encryption_toggle";
 export interface WebSocketCommand {
+  /** Type de commande */
   type: commandType;
+  /** Données associées à la commande */
   data: {
+    /** Indique si l'option est activée */
     enabled: boolean;
+    /** Clé de chiffrement optionnelle */
     key?: string;
   };
 }
 
 export interface CommandData {
+  /** Type de commande */
   type: commandType;
+  /** Données associées à la commande */
   data: any;
+  /** Identifiant unique de l'utilisateur */
   userId: string;
+  /** Identifiant unique de l'application */
   appId: string;
 }
 
 export interface UserAction {
+  /** Identifiant unique de l'action */
   id: string;
+  /** Identifiant unique de l'utilisateur */
   userId: string;
+  /** Identifiant unique de l'application */
   appId: string;
+  /** Type de commande */
   type: commandType;
+  /** Données associées à la commande */
   data: CommandData;
+  /** Horodatage de l'action */
   timestamp: number;
   status: "success" | "error" | "pending";
   metadata?: {
+    /** Adresse IP de l'utilisateur */
     ipAddress?: string;
+    /** Agent utilisateur */
     userAgent?: string;
+    /** Plateforme du système d'exploitation */
     platform?: string;
   };
 }

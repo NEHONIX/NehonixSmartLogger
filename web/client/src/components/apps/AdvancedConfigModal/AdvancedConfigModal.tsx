@@ -34,6 +34,7 @@ export const AdvancedConfigModal: React.FC<AdvancedConfigModalProps> = ({
     | "network"
     | "performance"
     | "encryption"
+    | "monitoring"
   >("general");
 
   const validateEncryptionKey = (key: string): boolean => {

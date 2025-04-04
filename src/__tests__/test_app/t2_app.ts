@@ -3,7 +3,7 @@ import { NehonixSmartLogger } from "../../logger";
 // Initialisation avec configuration
 const logger = NehonixSmartLogger.from("./test_app_folder").import(
   "nehonix-config-app with description (4).json"
-);
+)
 
 console.log("=== Test du mode local ===");
 // Test en mode local (par défaut)

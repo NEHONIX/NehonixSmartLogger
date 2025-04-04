@@ -447,6 +447,11 @@ export class NehonixSmartLogger extends EventEmitter {
   }
 
   private writeToConsole(message: string, level: string): void {
+    // En mode distant, vérifier si l'affichage console est explicitement désactivé
+    if (this.isRemoteMode && this.config?.console?.enabled === false) {
+      return;
+    }
+
     // Si le chiffrement est activé, chiffrer le message
     if (this.config?.encryption?.enabled && this.config.encryption.key) {
       const key = this.config.encryption.key;
@@ -457,9 +462,6 @@ export class NehonixSmartLogger extends EventEmitter {
         throw new Error("Error while encrypting message:" + error);
       }
     }
-
-    // En mode distant, vérifier si l'affichage console est désactivé
-    if (this.isRemoteMode && this.config?.console?.enabled === false) return;
 
     switch (level.toLowerCase()) {
       case "error":
@@ -512,8 +514,10 @@ export class NehonixSmartLogger extends EventEmitter {
       console.error(chalk.red("Error while writing to log file:", error));
     }
   }
-
-  public async shutdown(): Promise<void> {
+  /**
+   * Arrête les services de persistance et de monitoring
+   */
+  public async stdn(): Promise<void> {
     await this.persistenceService.shutdown();
     await this.monitoringService.shutdown();
     if (this.wsClient) {
@@ -531,17 +535,19 @@ export class NehonixSmartLogger extends EventEmitter {
     if (args.length > 0) {
       const firstArg = args[0];
 
-      if (
+      if (typeof firstArg === "string" && firstArg in LOG_LEVELS) {
+        // Nouveau format: log(level, ...messages)
+        logLevel = firstArg;
+        messages = args.slice(1);
+      } else if (
         typeof firstArg === "object" &&
         firstArg !== null &&
         ("logMode" in firstArg || "typeOrMessage" in firstArg)
       ) {
+        // Ancien format: log(options, ...messages)
         options = lgc.createLoggerConfig(firstArg as SERVER_LOGGER_PROPS);
         messages = args.slice(1);
         logLevel = (options.typeOrMessage as string) || "log";
-      } else if (typeof firstArg === "string" && firstArg in LOG_LEVELS) {
-        logLevel = firstArg;
-        messages = args.slice(1);
       }
     }
 
@@ -557,21 +563,26 @@ export class NehonixSmartLogger extends EventEmitter {
     const formattedMessage = this.formatMessage(timestamp, logLevel, messages);
     const coloredMessage = this.getColoredMessage(formattedMessage, logLevel);
 
-    // Créer l'entrée de log
-    const logEntry: LogEntry = {
-      id: crypto.randomBytes(16).toString("hex"),
-      timestamp,
-      level: logLevel.toLowerCase() as LogLevel,
-      message: messages
-        .map((m) => (typeof m === "object" ? JSON.stringify(m) : String(m)))
-        .join(" "),
-      metadata: messages.find((m) => typeof m === "object") as
-        | Record<string, unknown>
-        | undefined,
-    };
+    // Créer l'entrée de log uniquement si on est en mode remote ou si on en a besoin pour l'analyse
+    const logEntry = this.isRemoteMode
+      ? {
+          id: crypto.randomBytes(16).toString("hex"),
+          timestamp,
+          level: logLevel.toLowerCase() as LogLevel,
+          message: messages
+            .map((m) => (typeof m === "object" ? JSON.stringify(m) : String(m)))
+            .join(" "),
+          metadata: messages.find((m) => typeof m === "object") as
+            | Record<string, unknown>
+            | undefined,
+        }
+      : null;
 
-    // Gestion du mode distant
-    if (this.isRemoteMode) {
+    // Gestion du mode local (toujours actif)
+    this.writeToConsole(coloredMessage, logLevel);
+
+    // Gestion du mode distant (si activé)
+    if (this.isRemoteMode && logEntry) {
       if (!this.isAuthenticated) {
         // En mode distant non authentifié, stocker les logs pour envoi ultérieur
         this.pendingLogs.push(logEntry);
@@ -581,54 +592,42 @@ export class NehonixSmartLogger extends EventEmitter {
       }
     }
 
-    // Toujours afficher dans la console en mode local
-    // En mode distant, afficher uniquement si authentifié ou si pas de configuration spécifique
-    if (!this.isRemoteMode || !options.logMode?.enable) {
-      this.writeToConsole(coloredMessage, logLevel);
+    // Analyse et gestion des logs
+    const insights = this.analyzer.analyze(formattedMessage, timestamp, {
+      level: logLevel,
+      options,
+    });
+
+    if (insights.length > 0 && (logLevel === "error" || logLevel === "warn")) {
+      const suggestions = this.analyzer.generateSuggestions();
+      if (suggestions.length > 0) {
+        console.log(chalk.cyan("\n Logs analysing...:"));
+        suggestions.forEach((suggestion) =>
+          console.log(chalk.yellow(suggestion))
+        );
+      }
+
+      const anomalies = this.analyzer.detectAnomalies();
+      if (anomalies.length > 0) {
+        console.log(chalk.red("\n Detected anomaly:"));
+        anomalies.forEach((anomaly) => {
+          console.log(
+            chalk.magenta(
+              `   - Type: ${anomaly.type}\n` +
+                `     Frequences: ${anomaly.frequency}x in 5 minutes\n` +
+                `     Category: ${anomaly.category}\n` +
+                `     Severity: ${anomaly.severity}`
+            )
+          );
+        });
+      }
     }
 
-    // Analyse et gestion des logs locaux
-    if (!this.isRemoteMode || this.isAuthenticated) {
-      // Analyse du message
-      const insights = this.analyzer.analyze(formattedMessage, timestamp, {
-        level: logLevel,
-        options,
-      });
-
-      if (
-        insights.length > 0 &&
-        (logLevel === "error" || logLevel === "warn")
-      ) {
-        const suggestions = this.analyzer.generateSuggestions();
-        if (suggestions.length > 0) {
-          console.log(chalk.cyan("\n Logs analysing...:"));
-          suggestions.forEach((suggestion) =>
-            console.log(chalk.yellow(suggestion))
-          );
-        }
-
-        const anomalies = this.analyzer.detectAnomalies();
-        if (anomalies.length > 0) {
-          console.log(chalk.red("\n Detected anomaly:"));
-          anomalies.forEach((anomaly) => {
-            console.log(
-              chalk.magenta(
-                `   - Type: ${anomaly.type}\n` +
-                  `     Frequences: ${anomaly.frequency}x in 5 minutes\n` +
-                  `     Category: ${anomaly.category}\n` +
-                  `     Severity: ${anomaly.severity}`
-              )
-            );
-          });
-        }
-      }
-
-      // Écriture dans le fichier
-      if (options.logMode?.enable) {
-        const logName = formatLogFileName(options.logMode.name || "app");
-        const logPath = path.join(process.cwd(), "logs", logName);
-        this.writeToFile(logPath, formattedMessage, options, timestamp);
-      }
+    // Écriture dans le fichier si activé
+    if (options.logMode?.enable) {
+      const logName = formatLogFileName(options.logMode.name || "app");
+      const logPath = path.join(process.cwd(), "logs", logName);
+      this.writeToFile(logPath, formattedMessage, options, timestamp);
     }
   }
 
@@ -697,6 +696,60 @@ export class NehonixSmartLogger extends EventEmitter {
       };
       this.wsClient.send(JSON.stringify(message));
     }
+  }
+
+  /**
+   * Active le mode remote avec la configuration spécifiée
+   */
+  public enableRemoteMode(): NehonixSmartLogger {
+    if (!this.config) {
+      throw new Error(
+        "Configuration non chargée. Utilisez .from() et .import() d'abord."
+      );
+    }
+    // Vider les logs en attente car ils ont été générés en mode local
+    this.pendingLogs = [];
+    this.isRemoteMode = true;
+    this.setCredentials(this.config.user.userId, this.config.app.appId);
+    return this;
+  }
+
+  /**
+   * Désactive le mode remote
+   */
+  public disableRemoteMode(): NehonixSmartLogger {
+    this.isRemoteMode = false;
+    if (this.wsClient) {
+      this.wsClient.close();
+      this.wsClient = null;
+    }
+    return this;
+  }
+
+  // Méthodes de log simplifiées
+  public info(...messages: unknown[]): void {
+    this.log("info", ...messages);
+  }
+
+  public warn(...messages: unknown[]): void {
+    this.log("warn", ...messages);
+  }
+
+  public error(...messages: unknown[]): void {
+    this.log("error", ...messages);
+  }
+
+  public debug(...messages: unknown[]): void {
+    this.log("debug", ...messages);
+  }
+
+  // Méthode de log avec options avancées (pour la rétrocompatibilité)
+  public logWithOptions(
+    options: SERVER_LOGGER_PROPS,
+    ...messages: unknown[]
+  ): void {
+    const args = [options, ...messages];
+    this.log(...args);
   }
 }
 

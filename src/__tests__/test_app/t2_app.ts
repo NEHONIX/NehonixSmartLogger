@@ -1,26 +1,35 @@
-import NSMLogger, { NehonixSmartLogger } from "../../logger";
-import { createConfig, LoggerConfig as lgc } from "../../utils/logger.util";
-import { testLogger } from "./glob";
+import { NehonixSmartLogger } from "../../logger";
 
-// Test du mode local (sans configuration)
-console.log("\n=== Test du mode local ===");
-testLogger.log("Hello World - test 2");
-NSMLogger("info", "Test en mode local avec niveau info");
-NSMLogger("debug", "Test en mode local avec niveau debug");
-NSMLogger("error", "Test en mode local avec niveau error");
-NSMLogger("warn", "Test en mode local avec niveau warn"); 
+// Initialisation avec configuration
+const logger = NehonixSmartLogger.from("./test_app_folder").import(
+  "nehonix-config-app with description (4).json"
+);
 
-// Test avec configuration (mode remote)
-console.log("\n=== Test du mode distant ===");
-// testLogger.log("Hello World - test avec config");
+console.log("=== Test du mode local ===");
+// Test en mode local (par défaut)
+logger.info("Test en mode local avec niveau info");
+logger.debug("Test en mode local avec niveau debug");
+logger.error("Test en mode local avec niveau error");
+logger.warn("Test en mode local avec niveau warn");
 
-// Test avec différents niveaux de log
-// setInterval(() => {
-//   // Mode local
-//   NSMLogger("info", "Log périodique en mode local");
+// Utilisation de la méthode avancée (rétrocompatibilité)
+logger.logWithOptions(
+  {
+    logMode: {
+      enable: true,
+      name: "test-log",
+    },
+    typeOrMessage: "info",
+  },
+  "Test avec options avancées"
+);
 
-//   // Mode distant avec configuration
-//   testLogger.log("warn", "Log périodique en mode distant", {
-//     metadata: { timestamp: new Date().toISOString() },
-//   });
-// }, 1000);
+console.log("=== Test du mode distant ===");
+// Activation du mode remote
+logger.enableRemoteMode();
+
+// Les logs suivants seront envoyés au serveur WebSocket
+logger.info("Test en mode distant avec niveau info");
+logger.debug("Test en mode distant avec niveau debug");
+
+export { logger as testLogger };

@@ -35,4 +35,12 @@ export const defaultAppConfig: CreateAppConfig = {
     monitorMemory: true,
     monitorCPU: true,
   },
+  monitoring: {
+    enabled: true,
+    samplingRate: 10,
+    maxEventsPerSecond: 100,
+    monitorMemory: true,
+    monitorCPU: true,
+    monitorNetwork: true,
+  },
 };

@@ -5,6 +5,7 @@ import {
   PersistenceConfig,
   NetworkConfig,
   PerformanceConfig,
+  MonitoringConfig,
 } from "../../../types/app";
 import "./AdvancedConfigModal.scss";
 import { defaultAppConfig } from "./defaultAppConfig";
@@ -38,9 +39,8 @@ export const AdvancedConfigModal: React.FC<AdvancedConfigModalProps> = ({
   >("general");
 
   const validateEncryptionKey = (key: string): boolean => {
-    if (!key) return true; // La clé vide est autorisée (génération automatique)
+    if (!key) return true;
 
-    // La clé doit être une chaîne hexadécimale de 64 caractères
     if (!/^[0-9a-f]{64}$/i.test(key)) {
       setEncryptionKeyError(
         "La clé doit être une chaîne hexadécimale de 64 caractères (32 octets)"
@@ -52,7 +52,7 @@ export const AdvancedConfigModal: React.FC<AdvancedConfigModalProps> = ({
     return true;
   };
 
-  const handleEncryptionKeyChange = (key: string) => {
+  const handleEncryptionKeyChange = (key: string): void => {
     if (key) {
       validateEncryptionKey(key);
     } else {
@@ -64,7 +64,7 @@ export const AdvancedConfigModal: React.FC<AdvancedConfigModalProps> = ({
     });
   };
 
-  const handleSave = () => {
+  const handleSave = (): void => {
     if (config.encryption.enabled && config.encryption.key) {
       if (!validateEncryptionKey(config.encryption.key)) {
         return;
@@ -78,75 +78,27 @@ export const AdvancedConfigModal: React.FC<AdvancedConfigModalProps> = ({
     key: K,
     value: CreateAppConfig[K]
   ) => {
-    if (key === "console" && value) {
-      const consoleConfig = value as Partial<ConsoleConfig>;
-      setConfig((prev) => ({
-        ...prev,
-        console: {
-          enabled: true,
-          showTimestamp: true,
-          showLogLevel: true,
-          colorized: true,
-          format: "simple",
-          ...consoleConfig,
-        },
-      }));
-      return;
-    }
-
-    if (key === "persistence" && value) {
-      const persistenceConfig = value as Partial<PersistenceConfig>;
-      setConfig((prev) => ({
-        ...prev,
-        persistence: {
-          enabled: true,
-          maxSize: 100,
-          rotationInterval: "daily",
-          retentionPeriod: 30,
-          compressArchives: true,
-          ...persistenceConfig,
-        },
-      }));
-      return;
-    }
-
-    if (key === "network" && value) {
-      const networkConfig = value as Partial<NetworkConfig>;
-      setConfig((prev) => ({
-        ...prev,
-        network: {
-          batchSize: 50,
-          retryAttempts: 3,
-          retryDelay: 1000,
-          timeout: 5000,
-          offlineStorage: true,
-          maxOfflineSize: 50,
-          ...networkConfig,
-        },
-      }));
-      return;
-    }
-
-    if (key === "performance" && value) {
-      const performanceConfig = value as Partial<PerformanceConfig>;
-      setConfig((prev) => ({
-        ...prev,
-        performance: {
+    if (key === "monitoring" && value) {
+      const monitoringConfig = value as Partial<MonitoringConfig>;
+      setConfig((prevConfig) => ({
+        ...prevConfig,
+        monitoring: {
           enabled: true,
           samplingRate: 10,
           maxEventsPerSecond: 100,
           monitorMemory: true,
           monitorCPU: true,
-          ...performanceConfig,
+          monitorNetwork: true,
+          ...monitoringConfig,
         },
       }));
       return;
     }
 
-    setConfig((prev) => ({ ...prev, [key]: value }));
+    setConfig((prevConfig) => ({ ...prevConfig, [key]: value }));
   };
 
-  const handleConsoleChange = (changes: Partial<ConsoleConfig>) => {
+  const handleConsoleChange = (changes: Partial<ConsoleConfig>): void => {
     const currentConfig = config.console || {
       enabled: true,
       showTimestamp: true,
@@ -157,7 +109,9 @@ export const AdvancedConfigModal: React.FC<AdvancedConfigModalProps> = ({
     updateConfig("console", { ...currentConfig, ...changes });
   };
 
-  const handlePersistenceChange = (changes: Partial<PersistenceConfig>) => {
+  const handlePersistenceChange = (
+    changes: Partial<PersistenceConfig>
+  ): void => {
     const currentConfig = config.persistence || {
       enabled: true,
       maxSize: 100,
@@ -168,7 +122,7 @@ export const AdvancedConfigModal: React.FC<AdvancedConfigModalProps> = ({
     updateConfig("persistence", { ...currentConfig, ...changes });
   };
 
-  const handleNetworkChange = (changes: Partial<NetworkConfig>) => {
+  const handleNetworkChange = (changes: Partial<NetworkConfig>): void => {
     const currentConfig = config.network || {
       batchSize: 50,
       retryAttempts: 3,
@@ -180,7 +134,9 @@ export const AdvancedConfigModal: React.FC<AdvancedConfigModalProps> = ({
     updateConfig("network", { ...currentConfig, ...changes });
   };
 
-  const handlePerformanceChange = (changes: Partial<PerformanceConfig>) => {
+  const handlePerformanceChange = (
+    changes: Partial<PerformanceConfig>
+  ): void => {
     const currentConfig = config.performance || {
       enabled: true,
       samplingRate: 10,
@@ -189,6 +145,18 @@ export const AdvancedConfigModal: React.FC<AdvancedConfigModalProps> = ({
       monitorCPU: true,
     };
     updateConfig("performance", { ...currentConfig, ...changes });
+  };
+
+  const handleMonitoringChange = (changes: Partial<MonitoringConfig>) => {
+    const currentConfig = config.monitoring || {
+      enabled: true,
+      samplingRate: 10,
+      maxEventsPerSecond: 100,
+      monitorMemory: true,
+      monitorCPU: true,
+      monitorNetwork: true,
+    };
+    updateConfig("monitoring", { ...currentConfig, ...changes });
   };
 
   if (!isOpen) return null;
@@ -234,7 +202,12 @@ export const AdvancedConfigModal: React.FC<AdvancedConfigModalProps> = ({
           >
             Performance
           </button>
-
+          <button
+            className={activeTab === "monitoring" ? "active" : ""}
+            onClick={() => setActiveTab("monitoring")}
+          >
+            Monitoring
+          </button>
           <button
             className={activeTab === "encryption" ? "active" : ""}
             onClick={() => setActiveTab("encryption")}
@@ -651,6 +624,107 @@ export const AdvancedConfigModal: React.FC<AdvancedConfigModalProps> = ({
                         }
                       />
                       Monitorer l'utilisation CPU
+                    </label>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {activeTab === "monitoring" && (
+            <div className="tab-content">
+              <div className="form-group checkbox-group">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={config.monitoring?.enabled}
+                    onChange={(e) =>
+                      handleMonitoringChange({ enabled: e.target.checked })
+                    }
+                  />
+                  Activer le monitoring système
+                </label>
+              </div>
+
+              {config.monitoring?.enabled && (
+                <>
+                  <div className="form-group">
+                    <label htmlFor="monitoringSamplingRate">
+                      Taux d'échantillonnage (%)
+                    </label>
+                    <input
+                      type="number"
+                      id="monitoringSamplingRate"
+                      min="1"
+                      max="100"
+                      value={config.monitoring.samplingRate}
+                      onChange={(e) =>
+                        handleMonitoringChange({
+                          samplingRate: Number(e.target.value),
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="monitoringMaxEvents">
+                      Événements maximum par seconde
+                    </label>
+                    <input
+                      type="number"
+                      id="monitoringMaxEvents"
+                      min="1"
+                      value={config.monitoring.maxEventsPerSecond}
+                      onChange={(e) =>
+                        handleMonitoringChange({
+                          maxEventsPerSecond: Number(e.target.value),
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="form-group checkbox-group">
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={config.monitoring.monitorMemory}
+                        onChange={(e) =>
+                          handleMonitoringChange({
+                            monitorMemory: e.target.checked,
+                          })
+                        }
+                      />
+                      Monitorer l'utilisation mémoire
+                    </label>
+                  </div>
+
+                  <div className="form-group checkbox-group">
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={config.monitoring.monitorCPU}
+                        onChange={(e) =>
+                          handleMonitoringChange({
+                            monitorCPU: e.target.checked,
+                          })
+                        }
+                      />
+                      Monitorer l'utilisation CPU
+                    </label>
+                  </div>
+
+                  <div className="form-group checkbox-group">
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={config.monitoring.monitorNetwork}
+                        onChange={(e) =>
+                          handleMonitoringChange({
+                            monitorNetwork: e.target.checked,
+                          })
+                        }
+                      />
+                      Monitorer l'utilisation réseau
                     </label>
                   </div>
                 </>

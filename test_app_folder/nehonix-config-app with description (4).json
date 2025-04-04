@@ -4,9 +4,9 @@
   },
   "app": {
     "provider": "nehonix",
-    "apiKey": "nehonix@b4e35fc5c064a660bacfe257e720e3c1aee98332e8c8dbc7cdb904e53d1e6da6.nsl",
-    "appId": "38e3c785-2651-4a70-b5bf-8187dcd3d3c1",
-    "name": "App with description"
+    "apiKey": "nehonix@b040bb86d57defb6fec7e93143760bef0f6ad3cfb4156002e85312c2394087a2.nsl",
+    "appId": "73496b47-efb5-432c-bea5-29a145655637",
+    "name": "My Super App"
   },
   "logLevel": "debug",
   "encryption": {
@@ -41,5 +41,13 @@
     "maxEventsPerSecond": 100,
     "monitorMemory": true,
     "monitorCPU": true
+  },
+  "monitoring": {
+    "enabled": true,
+    "samplingRate": 10,
+    "maxEventsPerSecond": 100,
+    "monitorMemory": true,
+    "monitorCPU": true,
+    "monitorNetwork": true
   }
 }

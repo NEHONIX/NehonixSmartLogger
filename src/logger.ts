@@ -67,6 +67,7 @@ export class NehonixSmartLogger extends EventEmitter {
   private isAuthenticated: boolean = false;
   private pendingLogs: LogEntry[] = [];
   private isRemoteMode: boolean = false;
+  private isInitialized: boolean = false;
 
   private constructor() {
     super();
@@ -101,8 +102,11 @@ export class NehonixSmartLogger extends EventEmitter {
         LOG_LEVELS[
           this.config.logLevel?.toLowerCase() as keyof LOG_LEVELS_TYPE
         ] || LOG_LEVELS.debug;
-      this.isRemoteMode = true;
-      this.setCredentials(this.config.user.userId, this.config.app.appId);
+      // Ne pas activer le mode remote ici, cela sera fait par enableRemoteMode()
+      if (!this.isInitialized) {
+        this.initialize();
+        this.isInitialized = true;
+      }
       return this;
     } catch (error) {
       throw new Error(
@@ -111,9 +115,7 @@ export class NehonixSmartLogger extends EventEmitter {
     }
   }
 
-  public async initialize(config: {
-    monitoring: MonitoringConfig;
-  }): Promise<void> {
+  public async initialize(): Promise<void> {
     if (this.config) {
       // Mise à jour du niveau de log depuis la configuration
       this.currentLogLevel =
@@ -131,13 +133,13 @@ export class NehonixSmartLogger extends EventEmitter {
       if (this.config.persistence?.enabled) {
         await this.persistenceService.initialize(persistence);
       }
-    }
 
-    if (config.monitoring) {
-      await this.monitoringService.initialize(config.monitoring);
-      this.monitoringService.on("metrics", (metrics) => {
-        this.handleMetrics(metrics);
-      });
+      if (this.config?.monitoring?.enabled) {
+        await this.monitoringService.initialize(this.config?.monitoring);
+        this.monitoringService.on("metrics", (metrics) => {
+          this.handleMetrics(metrics);
+        });
+      }
     }
   }
 
@@ -372,9 +374,10 @@ export class NehonixSmartLogger extends EventEmitter {
     this.userId = userId;
     this.appId = appId;
     this.isRemoteMode = true;
-    // Initier la connexion WebSocket seulement quand les credentials sont définis
-    this.connectToWebSocket();
-    if (this.wsClient?.readyState === WebSocket.OPEN) {
+    // Ne tenter la connexion WebSocket que si nous n'avons pas déjà un client connecté
+    if (!this.wsClient || this.wsClient.readyState === WebSocket.CLOSED) {
+      this.connectToWebSocket();
+    } else if (this.wsClient.readyState === WebSocket.OPEN) {
       this.authenticate();
     }
   }
@@ -455,12 +458,17 @@ export class NehonixSmartLogger extends EventEmitter {
 
   private writeToConsole(message: string, level: string): void {
     // En mode distant, vérifier si l'affichage console est explicitement désactivé
+    // Mais en mode local, toujours afficher
     if (this.isRemoteMode && this.config?.console?.enabled === false) {
       return;
     }
 
-    // Si le chiffrement est activé, chiffrer le message
-    if (this.config?.encryption?.enabled && this.config.encryption.key) {
+    // Si le chiffrement est activé ET qu'on est en mode remote, chiffrer le message
+    if (
+      this.isRemoteMode &&
+      this.config?.encryption?.enabled &&
+      this.config.encryption.key
+    ) {
       const key = this.config.encryption.key;
       try {
         message = this.encryptionService.encrypt(message, key);
@@ -571,32 +579,33 @@ export class NehonixSmartLogger extends EventEmitter {
     const coloredMessage = this.getColoredMessage(formattedMessage, logLevel);
 
     // Créer l'entrée de log uniquement si on est en mode remote ou si on en a besoin pour l'analyse
-    const logEntry = this.isRemoteMode
-      ? {
-          id: crypto.randomBytes(16).toString("hex"),
-          timestamp,
-          level: logLevel.toLowerCase() as LogLevel,
-          message: messages
-            .map((m) => (typeof m === "object" ? JSON.stringify(m) : String(m)))
-            .join(" "),
-          metadata: messages.find((m) => typeof m === "object") as
-            | Record<string, unknown>
-            | undefined,
-        }
-      : null;
+    const logEntry = {
+      id: crypto.randomBytes(16).toString("hex"),
+      timestamp,
+      level: logLevel.toLowerCase() as LogLevel,
+      message: messages
+        .map((m) => (typeof m === "object" ? JSON.stringify(m) : String(m)))
+        .join(" "),
+      metadata: messages.find((m) => typeof m === "object") as
+        | Record<string, unknown>
+        | undefined,
+    };
 
-    // Gestion du mode local (toujours actif)
-    this.writeToConsole(coloredMessage, logLevel);
-
-    // Gestion du mode distant (si activé)
-    if (this.isRemoteMode && logEntry) {
+    if (this.isRemoteMode) {
+      // En mode distant
       if (!this.isAuthenticated) {
-        // En mode distant non authentifié, stocker les logs pour envoi ultérieur
+        // Stocker les logs pour envoi ultérieur
         this.pendingLogs.push(logEntry);
       } else {
-        // En mode distant authentifié, envoyer au WebSocket
+        // Envoyer au WebSocket et afficher dans la console si activé
         this.sendLogToWebSocket(logEntry);
+        if (this.config?.console?.enabled !== false) {
+          this.writeToConsole(coloredMessage, logLevel);
+        }
       }
+    } else {
+      // En mode local, toujours afficher dans la console
+      this.writeToConsole(coloredMessage, logLevel);
     }
 
     // Analyse et gestion des logs
@@ -711,7 +720,7 @@ export class NehonixSmartLogger extends EventEmitter {
   public enableRemoteMode(): NehonixSmartLogger {
     if (!this.config) {
       throw new Error(
-        "Configuration non chargée. Utilisez .from() et .import() d'abord."
+        "No configuration found, initialize the logger with .from() and .import() first."
       );
     }
     // Vider les logs en attente car ils ont été générés en mode local

@@ -59,9 +59,20 @@ Créez un fichier `nehonix.config.json`:
 ```typescript
 import { NehonixSmartLogger } from "nehonix-logger";
 
-// Initialisation avec configuration
+// Méthode recommandée : utilisation d'un fichier de configuration
+/**
+ * NOTE: la lecture se fait à la racine du projet exemple:
+ *
+ * -Mon_Projet:
+ *   -src
+ *   -public
+ *   -other
+ *   -config
+ *      - nehonix.config.json
+ *      - autre_config.json
+ */
 const logger = NehonixSmartLogger.from("./config").import(
-  "nehonix.config.json"
+  "nehonix.config.json" //ou autre_config.json si le fichier se trouve par exemple dans src, avancez d'un niveau, exemple: ./src/config ou ./../config
 );
 
 // Par défaut, le logger démarre en mode local

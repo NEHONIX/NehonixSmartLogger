@@ -4,15 +4,17 @@ import { createGzip } from "zlib";
 import { promisify } from "util";
 import { pipeline } from "stream";
 import { EncryptionService } from "./EncryptionService";
+import chalk from "chalk";
+import { LogRotationConfig } from "../types/type";
 
 const pipelineAsync = promisify(pipeline);
 
-export interface LogRotationConfig {
-  maxSize: number; // en MB
+/**
+ *   maxSize: number; // en MB
   maxFiles: number;
   compress: boolean;
   interval: "hourly" | "daily" | "weekly";
-}
+ */
 
 const enc = EncryptionService.getInstance();
 
@@ -29,6 +31,7 @@ export class LogPersistenceService {
     if (!LogPersistenceService.instance) {
       LogPersistenceService.instance = new LogPersistenceService();
     }
+    console.log(chalk.blueBright("LogPersistenceService instance created"));
     return LogPersistenceService.instance;
   }
 

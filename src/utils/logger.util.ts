@@ -11,11 +11,17 @@ import type { SERVER_LOGGER_PROPS } from "../types/type";
 export class LoggerConfig {
   static USE_DEFAULT_LOGGER: SERVER_LOGGER_PROPS = {
     groupInterval: 10000,
-    logMode: {
-      enable: true,
-      name: "app.log",
+    writeFileMode: {
+      enable: false,
+      log_rotation: {
+        maxSize: 100,
+        maxFiles: 10,
+        compress: false,
+        interval: "daily",
+      },
+      fileName: "nehonix_logger.log",
       saved_message: "enable",
-      display_log: true,
+      display_log: false,
       crypt: {
         CRYPT_DATAS: {
           lockStatus: "disable",
@@ -35,31 +41,36 @@ export class LoggerConfig {
     return {
       groupInterval:
         config?.groupInterval || LoggerConfig.USE_DEFAULT_LOGGER.groupInterval,
-      logMode: {
+      writeFileMode: {
         enable:
-          config?.logMode?.enable ??
-          LoggerConfig.USE_DEFAULT_LOGGER.logMode?.enable,
-        name:
-          config?.logMode?.name ||
-          LoggerConfig.USE_DEFAULT_LOGGER.logMode?.name,
+          config?.writeFileMode?.enable ??
+          LoggerConfig.USE_DEFAULT_LOGGER.writeFileMode?.enable,
+        fileName:
+          config?.writeFileMode?.fileName ||
+          LoggerConfig.USE_DEFAULT_LOGGER.writeFileMode?.fileName,
         saved_message:
-          config?.logMode?.saved_message ||
-          LoggerConfig.USE_DEFAULT_LOGGER.logMode?.saved_message,
+          config?.writeFileMode?.saved_message ||
+          LoggerConfig.USE_DEFAULT_LOGGER.writeFileMode?.saved_message,
         display_log:
-          config?.logMode?.display_log ??
-          LoggerConfig.USE_DEFAULT_LOGGER.logMode?.display_log,
+          config?.writeFileMode?.display_log ??
+          LoggerConfig.USE_DEFAULT_LOGGER.writeFileMode?.display_log,
         crypt: {
           CRYPT_DATAS: {
             lockStatus:
-              config?.logMode?.crypt?.CRYPT_DATAS?.lockStatus || "disable",
-            key: config?.logMode?.crypt?.CRYPT_DATAS?.key,
-            iv: config?.logMode?.crypt?.CRYPT_DATAS?.iv || Buffer.alloc(16, 0),
+              config?.writeFileMode?.crypt?.CRYPT_DATAS?.lockStatus ||
+              "disable",
+            key: config?.writeFileMode?.crypt?.CRYPT_DATAS?.key,
+            iv:
+              config?.writeFileMode?.crypt?.CRYPT_DATAS?.iv ||
+              Buffer.alloc(16, 0),
           },
           CRYPT_LOGS: {
             lockStatus:
-              config?.logMode?.crypt?.CRYPT_LOGS?.lockStatus || "disable",
-            key: config?.logMode?.crypt?.CRYPT_LOGS?.key,
-            iv: config?.logMode?.crypt?.CRYPT_LOGS?.iv || Buffer.alloc(16, 0),
+              config?.writeFileMode?.crypt?.CRYPT_LOGS?.lockStatus || "disable",
+            key: config?.writeFileMode?.crypt?.CRYPT_LOGS?.key,
+            iv:
+              config?.writeFileMode?.crypt?.CRYPT_LOGS?.iv ||
+              Buffer.alloc(16, 0),
           },
         },
       },

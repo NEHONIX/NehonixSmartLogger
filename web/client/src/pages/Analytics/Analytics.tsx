@@ -7,9 +7,10 @@ import {
   TimeRange,
 } from "../../types/app";
 import { appApi } from "../../services/appApi";
-import { MetricsChart } from "../../components/analytics/MetricsChart/MetricsChart";
-import { PerformanceOverview } from "../../components/analytics/PerformanceOverview/PerformanceOverview";
+import MetricsChart from "../../components/analytics/MetricsChart/MetricsChart";
+import PerformanceOverview from "../../components/analytics/PerformanceOverview/PerformanceOverview";
 import { AnomalyDetection } from "../../components/analytics/AnomalyDetection/AnomalyDetection";
+import LogOverview from "../../components/analytics/LogOverview/LogOverview";
 import "./Analytics.scss";
 import { useFecthApps } from "../../hooks/useFetchApps";
 import { useWebSocket } from "../../hooks/useWebSocket";
@@ -19,20 +20,23 @@ import { useSetPageTitle } from "../../utils/setPageTitle";
 
 const Analytics: React.FC = () => {
   const { appId } = useParams<{ appId: string }>();
-  const [metrics, setMetrics] = useState<PerformanceMetrics | null>(null);
-  const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [metricsData, setMetricsData] = useState<
+    Array<{
+      timestamp: string;
+      cpu: number;
+      memory: number;
+      requests: number;
+    }>
+  >([]);
   const [timeRange, setTimeRange] = useState<TimeRange>({
     start: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
     end: new Date().toISOString(),
     type: "day",
   });
   const [loading, setLoading] = useState(true);
+  const [logs, setLogs] = useState<LogEntry[]>([]);
   const { apps, fetchApps, isLoading: isLoadingApps } = useFecthApps();
   const { user } = useAuth();
-
-  useEffect(() => {
-    console.log("metrics", metrics);
-  }, [metrics]);
 
   // Connexion WebSocket avec gestion des métriques
   const { isConnected, setFilters, sendCommand, isAuthenticated } =
@@ -40,20 +44,42 @@ const Analytics: React.FC = () => {
       wsUrl: NHX_CONFIG._global_.__WEBSOCKET_URL__,
       appId: appId || "",
       userId: user?.uid || "",
-      onLogs: (newLogs) => setLogs((prev) => [...prev, ...newLogs]),
+      onLogs: (newLogs) => {
+        console.log("new logs: ", newLogs);
+        setLogs((prev) => {
+          const updatedLogs = [...prev, ...newLogs];
+          // Limiter à 1000 logs pour la performance
+          return updatedLogs.slice(-1000);
+        });
+      },
       onMetrics: (newMetrics) => {
-        const adaptedMetrics: PerformanceMetrics = {
-          ...newMetrics,
-          disk: {
-            // On multi les valeurs de mémoire comme approximation pour le disque
-            // Multiplier par 10 pour simuler un disque plus grand que la RAM
-            total: newMetrics.memory.total * 10,
-            used: newMetrics.memory.used * 10,
-            free: newMetrics.memory.free * 10,
-          },
-        };
-
-        setMetrics(adaptedMetrics);
+        const timestamp = new Date().toISOString();
+        setMetricsData((prev) => {
+          const newData = [
+            ...prev,
+            {
+              timestamp,
+              cpu: newMetrics.cpu?.usage ?? 0,
+              memory: newMetrics.memory
+                ? (newMetrics.memory.used / newMetrics.memory.total) * 100
+                : 0,
+              requests:
+                newMetrics.network?.interfaces?.[
+                  Object.keys(newMetrics.network.interfaces)[0]
+                ]?.packetsReceived ?? 0,
+            },
+          ];
+          // Garder seulement les dernières 60 minutes de données pour "hour",
+          // 144 points pour "day" (10 minutes d'intervalle),
+          // ou 168 points pour "week" (1 heure d'intervalle)
+          const maxPoints =
+            timeRange.type === "hour"
+              ? 60
+              : timeRange.type === "day"
+              ? 144
+              : 168;
+          return newData.slice(-maxPoints);
+        });
         setLoading(false);
       },
     });
@@ -66,7 +92,7 @@ const Analytics: React.FC = () => {
   const app = apps.find((app) => app.id === appId);
 
   useSetPageTitle({
-    title: `  ${NHX_CONFIG._app_info_.__SHORT_NAME}  ●  ${app?.name} `,
+    title: `  Real-time analytics  ●  ${app?.name} `,
     description: "Analyse des performances de l'application",
   });
 
@@ -135,11 +161,9 @@ const Analytics: React.FC = () => {
   return (
     <div className="analytics">
       <div className="analytics-header">
-        <h1>
-          {app?.name}{" "}
-          <span style={{ color: isConnected ? "green" : "red" }}>●</span>{" "}
-          Real-time analytics
-        </h1>
+        <span style={{ color: isConnected ? "green" : "red" }}>
+          {NHX_CONFIG._app_info_.__SHORT_NAME} ●
+        </span>{" "}
         <div className="time-range-selector">
           <select
             value={timeRange.type}
@@ -153,7 +177,6 @@ const Analytics: React.FC = () => {
         </div>
         <div className="app_details">
           <p>
-            App status:{" "}
             <span
               style={{
                 fontWeight: "bold",
@@ -164,7 +187,6 @@ const Analytics: React.FC = () => {
             </span>
           </p>
           <p>
-            Server status:{" "}
             <span
               style={{
                 fontWeight: "bold",
@@ -175,7 +197,6 @@ const Analytics: React.FC = () => {
             </span>
           </p>
           <p>
-            Auth status:{" "}
             <span
               style={{
                 fontWeight: "bold",
@@ -196,21 +217,24 @@ const Analytics: React.FC = () => {
             <>
               <div className="metrics-section">
                 <h2>Performance metrics</h2>
-                {metrics ? (
-                  <MetricsChart metrics={metrics} timeRange={timeRange.type} />
+                {metricsData.length > 0 ? (
+                  <MetricsChart data={metricsData} timeRange={timeRange.type} />
                 ) : (
                   <div className="no-data">No metrics data available</div>
                 )}
               </div>
-
-              <div className="logs-section">
+              <div className="log_analysis">
                 <h2>Logs analysis</h2>
-                <PerformanceOverview metrics={metrics} logs={logs} />
+                <LogOverview logs={logs} timeRange={timeRange.type} />
+              </div>
+              <div className="logs-section">
+                <h2>Performance overview</h2>
+                <PerformanceOverview appId={appId} timeRange={timeRange.type} />
               </div>
 
               <div className="anomalies-section">
                 <h2>Anomalies detection</h2>
-                <AnomalyDetection logs={logs} metrics={metrics} />
+                <AnomalyDetection logs={[]} metrics={null} />
               </div>
             </>
           )}

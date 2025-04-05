@@ -1,128 +1,202 @@
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes alertPulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.4);
+  }
+  70% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
 .anomaly-detection {
   padding: 20px;
-  background: #ffffff;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+  }
 
   .anomaly-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
+    animation: fadeInUp 0.5s ease-out;
 
     h2 {
+      font-size: 24px;
+      color: #333;
       margin: 0;
-      color: #2c3e50;
     }
 
     .analyzing {
-      color: #6c757d;
-      font-size: 0.9rem;
+      color: #666;
+      font-style: italic;
+      animation: pulse 1.5s infinite;
     }
   }
 
   .no-anomalies {
     text-align: center;
     padding: 40px;
-    background: #f8f9fa;
-    border-radius: 6px;
-    color: #6c757d;
+    color: #666;
+    font-style: italic;
+    animation: fadeInUp 0.5s ease-out;
   }
 
   .anomaly-list {
     display: grid;
     gap: 20px;
+    animation: fadeInUp 0.8s ease-out;
 
     .anomaly-card {
-      background: #f8f9fa;
-      border-radius: 6px;
+      background: rgba(255, 255, 255, 0.8);
+      border-radius: 8px;
       padding: 20px;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+      animation: slideInRight 0.5s ease-out;
+
+      &:hover {
+        transform: translateX(-4px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
 
       .anomaly-header {
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 12px;
         margin-bottom: 15px;
 
         .anomaly-severity {
           padding: 4px 8px;
           border-radius: 4px;
-          color: white;
-          font-size: 0.8rem;
+          font-size: 12px;
           font-weight: bold;
+          color: white;
+          text-transform: uppercase;
+          animation: alertPulse 2s infinite;
         }
 
         .anomaly-type {
-          color: #6c757d;
-          font-size: 0.9rem;
+          font-weight: bold;
+          color: #666;
         }
 
         .anomaly-timestamp {
+          color: #999;
+          font-size: 14px;
           margin-left: auto;
-          color: #6c757d;
-          font-size: 0.9rem;
         }
       }
 
       .anomaly-description {
-        color: #2c3e50;
+        font-size: 16px;
+        color: #333;
         margin-bottom: 15px;
-        font-size: 1rem;
       }
 
       .anomaly-logs {
-        margin-bottom: 15px;
+        margin-top: 15px;
 
         h4 {
-          color: #2c3e50;
+          font-size: 16px;
+          color: #333;
           margin-bottom: 10px;
         }
 
         .log-preview {
-          background: #ffffff;
-          border-radius: 4px;
+          background: rgba(0, 0, 0, 0.05);
+          border-radius: 6px;
           padding: 10px;
 
           .log-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 5px 0;
-            border-bottom: 1px solid #dee2e6;
+            padding: 8px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            animation: fadeInUp 0.3s ease-out;
 
             &:last-child {
               border-bottom: none;
             }
 
+            &:hover {
+              background: rgba(0, 0, 0, 0.02);
+              transform: translateX(5px);
+            }
+
             .log-level {
-              font-size: 0.8rem;
+              font-weight: bold;
+              margin-right: 10px;
               padding: 2px 6px;
               border-radius: 3px;
-              background: #e9ecef;
-              color: #495057;
+              font-size: 12px;
+              text-transform: uppercase;
+
+              &[data-level="error"] {
+                background: #dc3545;
+                color: white;
+              }
+
+              &[data-level="warn"] {
+                background: #ffc107;
+                color: #333;
+              }
             }
 
             .log-message {
-              color: #2c3e50;
-              font-size: 0.9rem;
+              color: #666;
+              font-size: 14px;
             }
           }
 
           .more-logs {
-            margin-top: 10px;
-            color: #6c757d;
-            font-size: 0.9rem;
             text-align: center;
+            color: #999;
+            font-size: 14px;
+            margin-top: 10px;
+            font-style: italic;
           }
         }
       }
 
       .anomaly-metrics {
-        margin-bottom: 15px;
+        margin-top: 15px;
 
         h4 {
-          color: #2c3e50;
+          font-size: 16px;
+          color: #333;
           margin-bottom: 10px;
         }
 
@@ -132,20 +206,28 @@
           gap: 10px;
 
           .metric-item {
-            background: #ffffff;
+            background: rgba(0, 0, 0, 0.05);
             padding: 10px;
-            border-radius: 4px;
+            border-radius: 6px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            transition: all 0.3s ease;
+            animation: fadeInUp 0.3s ease-out;
+
+            &:hover {
+              background: rgba(0, 0, 0, 0.08);
+              transform: translateY(-2px);
+            }
 
             span:first-child {
-              color: #6c757d;
+              color: #666;
+              font-size: 14px;
             }
 
             span:last-child {
-              color: #2c3e50;
               font-weight: bold;
+              color: #333;
             }
           }
         }
@@ -154,29 +236,34 @@
       .anomaly-actions {
         display: flex;
         gap: 10px;
+        margin-top: 20px;
 
         button {
           padding: 8px 16px;
           border: none;
           border-radius: 4px;
-          font-size: 0.9rem;
+          font-weight: bold;
           cursor: pointer;
-          transition: background-color 0.2s;
+          transition: all 0.3s ease;
+
+          &:hover {
+            transform: translateY(-2px);
+          }
 
           &.status-button {
-            background: #17a2b8;
+            background: #007bff;
             color: white;
 
             &:hover {
-              background: #138496;
+              background: #0056b3;
             }
 
-            &.investigating {
+            &[data-status="investigating"] {
               background: #ffc107;
-              color: #000;
+              color: #333;
 
               &:hover {
-                background: #e0a800;
+                background: #d39e00;
               }
             }
           }
@@ -187,6 +274,93 @@
 
             &:hover {
               background: #218838;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// Dark mode
+@media (prefers-color-scheme: dark) {
+  .anomaly-detection {
+    background: #2d2d2d;
+
+    .anomaly-header {
+      h2 {
+        color: #fff;
+      }
+
+      .analyzing {
+        color: #aaa;
+      }
+    }
+
+    .no-anomalies {
+      color: #aaa;
+    }
+
+    .anomaly-list {
+      .anomaly-card {
+        background: #333;
+
+        .anomaly-header {
+          .anomaly-type {
+            color: #aaa;
+          }
+
+          .anomaly-timestamp {
+            color: #777;
+          }
+        }
+
+        .anomaly-description {
+          color: #fff;
+        }
+
+        .anomaly-logs {
+          h4 {
+            color: #fff;
+          }
+
+          .log-preview {
+            background: rgba(255, 255, 255, 0.05);
+
+            .log-item {
+              border-bottom-color: rgba(255, 255, 255, 0.1);
+
+              &:hover {
+                background: rgba(255, 255, 255, 0.02);
+              }
+
+              .log-message {
+                color: #aaa;
+              }
+            }
+          }
+        }
+
+        .anomaly-metrics {
+          h4 {
+            color: #fff;
+          }
+
+          .metrics-grid {
+            .metric-item {
+              background: rgba(255, 255, 255, 0.05);
+
+              &:hover {
+                background: rgba(255, 255, 255, 0.08);
+              }
+
+              span:first-child {
+                color: #aaa;
+              }
+
+              span:last-child {
+                color: #fff;
+              }
             }
           }
         }

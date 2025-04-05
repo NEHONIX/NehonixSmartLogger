@@ -128,7 +128,7 @@ export class LogAnalyzer {
 
       if (frequency > 5) {
         suggestions.push(
-          `⚠️ Erreur fréquente détectée (${frequency}x) - ${insight.category}:\n` +
+          ` Erreur fréquente détectée (${frequency}x) - ${insight.category}:\n` +
             `   Pattern: ${insight.pattern}\n` +
             `   Sévérité: ${insight.severity}\n` +
             `   Suggestion: ${

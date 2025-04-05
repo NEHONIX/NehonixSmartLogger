@@ -1,44 +1,170 @@
 .metrics-chart {
+  background: white;
+  border-radius: 12px;
   padding: 20px;
-  background: #ffffff;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
 
-  .chart-container {
-    margin-bottom: 30px;
-    padding: 15px;
-    background: #f8f9fa;
-    border-radius: 6px;
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+  }
 
-    h3 {
-      margin-bottom: 15px;
-      color: #2c3e50;
-      font-size: 1.2rem;
+  .custom-tooltip {
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 8px;
+    padding: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+
+    .tooltip-time {
+      margin: 0 0 8px 0;
+      font-size: 14px;
+      color: #666;
+      font-weight: bold;
+    }
+
+    .tooltip-item {
+      margin: 4px 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+
+      .tooltip-label {
+        font-weight: bold;
+      }
+
+      .tooltip-value {
+        font-family: monospace;
+      }
+    }
+  }
+
+  .metrics-table {
+    margin-bottom: 20px;
+    overflow-x: auto;
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+
+      th,
+      td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+      }
+
+      th {
+        font-weight: bold;
+        color: #666;
+      }
+
+      .metric-bar {
+        width: 100%;
+        height: 20px;
+        background: rgba(0, 0, 0, 0.05);
+        border-radius: 10px;
+        overflow: hidden;
+
+        .bar {
+          height: 100%;
+          transition: width 0.3s ease;
+
+          &.cpu {
+            background: #007bff;
+          }
+
+          &.memory {
+            background: #28a745;
+          }
+        }
+      }
+
+      .metric-value {
+        font-family: monospace;
+        font-size: 14px;
+        color: #666;
+      }
     }
   }
 
   .metrics-summary {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 20px;
-    margin-top: 30px;
 
     .metric-card {
+      background: rgba(0, 0, 0, 0.05);
       padding: 15px;
-      background: #f8f9fa;
-      border-radius: 6px;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+      text-align: center;
 
       h4 {
-        margin-bottom: 10px;
-        color: #2c3e50;
-        font-size: 1.1rem;
+        margin: 0 0 10px 0;
+        color: #666;
       }
 
-      p {
-        margin: 5px 0;
-        color: #6c757d;
-        font-size: 0.9rem;
+      .current-value {
+        font-size: 24px;
+        font-weight: bold;
+        color: #333;
+      }
+    }
+  }
+}
+
+// Dark mode
+@media (prefers-color-scheme: dark) {
+  .metrics-chart {
+    background: #2d2d2d;
+
+    .custom-tooltip {
+      background: rgba(45, 45, 45, 0.95);
+      border-color: rgba(255, 255, 255, 0.1);
+
+      .tooltip-time {
+        color: #aaa;
+      }
+
+      .tooltip-item {
+        color: #fff;
+      }
+    }
+
+    .metrics-table {
+      table {
+        th,
+        td {
+          border-bottom-color: rgba(255, 255, 255, 0.1);
+        }
+
+        th {
+          color: #aaa;
+        }
+
+        .metric-bar {
+          background: rgba(255, 255, 255, 0.1);
+        }
+
+        .metric-value {
+          color: #aaa;
+        }
+      }
+    }
+
+    .metrics-summary {
+      .metric-card {
+        background: rgba(255, 255, 255, 0.05);
+
+        h4 {
+          color: #aaa;
+        }
+
+        .current-value {
+          color: #fff;
+        }
       }
     }
   }

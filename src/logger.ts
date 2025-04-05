@@ -14,6 +14,7 @@ import type {
   UserAction,
   CommandData,
   ConsoleConfig,
+  LogRotationConfig,
 } from "./types/type";
 import crypto from "crypto";
 import { formatLogFileName, LoggerConfig as lgc } from "./utils/logger.util";
@@ -21,10 +22,7 @@ import { LogAnalyzer } from "./analytics/LogAnalyzer";
 import { EventEmitter } from "events";
 import WebSocket from "ws";
 import { NHX_CONFIG } from "../web/shared/config/logger.conf";
-import {
-  LogPersistenceService,
-  LogRotationConfig,
-} from "./services/LogPersistenceService";
+import { LogPersistenceService } from "./services/LogPersistenceService";
 import { PerformanceMonitoringService } from "./services/PerformanceMonitoringService";
 import { EncryptionService } from "./services/EncryptionService";
 
@@ -76,8 +74,6 @@ export class NehonixSmartLogger extends EventEmitter {
     this.persistenceService = LogPersistenceService.getInstance();
     this.monitoringService = PerformanceMonitoringService.getInstance();
     this.encryptionService = EncryptionService.getInstance();
-    /*activation des commandes par défaut*/
-    //Activation de l'affichage des logs dans la console
   }
 
   public static from(configPath: string): NehonixSmartLogger {
@@ -520,39 +516,6 @@ export class NehonixSmartLogger extends EventEmitter {
     }
   }
 
-  private async writeToFile(
-    logPath: string,
-    message: string,
-    options: SERVER_LOGGER_PROPS,
-    timestamp: string
-  ): Promise<void> {
-    try {
-      if (options.logMode?.enable) {
-        const rotationConfig: LogRotationConfig = {
-          maxSize: options.logMode.maxSize || 100,
-          maxFiles: options.logMode.maxFiles || 10,
-          compress: options.logMode.compress || false,
-          interval: options.logMode.rotationInterval || "daily",
-        };
-
-        // Si le chiffrement est activé, chiffrer le message avant de l'écrire
-        if (this.config?.encryption?.enabled && this.config.encryption.key) {
-          message = this.encryptionService.encrypt(
-            message,
-            this.config.encryption.key
-          );
-        }
-
-        await this.persistenceService.writeLog(
-          logPath,
-          message,
-          rotationConfig
-        );
-      }
-    } catch (error) {
-      console.error(chalk.red("Error while writing to log file:", error));
-    }
-  }
   /**
    * Arrête les services de persistance et de monitoring
    */
@@ -570,6 +533,8 @@ export class NehonixSmartLogger extends EventEmitter {
     let messages: unknown[] = args;
     let logLevel: string = "log";
 
+    console.log("options avant modification: ", options);
+
     // Détection du format d'appel
     if (args.length > 0) {
       const firstArg = args[0];
@@ -581,12 +546,13 @@ export class NehonixSmartLogger extends EventEmitter {
       } else if (
         typeof firstArg === "object" &&
         firstArg !== null &&
-        ("logMode" in firstArg || "typeOrMessage" in firstArg)
+        ("writeFileMode" in firstArg || "typeOrMessage" in firstArg)
       ) {
         // Ancien format: log(options, ...messages)
         options = lgc.createLoggerConfig(firstArg as SERVER_LOGGER_PROPS);
         messages = args.slice(1);
         logLevel = (options.typeOrMessage as string) || "log";
+        console.log("options après modification: ", options);
       }
     }
 
@@ -662,10 +628,13 @@ export class NehonixSmartLogger extends EventEmitter {
         });
       }
     }
-
+ 
     // Écriture dans le fichier si activé
-    if (options.logMode?.enable) {
-      const logName = formatLogFileName(options.logMode.name || "app");
+    console.log("options finale: ", options);
+    if (options.writeFileMode?.enable) {
+      const logName = formatLogFileName(
+        options.writeFileMode.fileName || "nehonix_logger"
+      );
       const logPath = path.join(process.cwd(), "logs", logName);
       this.writeToFile(logPath, formattedMessage, options, timestamp);
     }
@@ -784,6 +753,67 @@ export class NehonixSmartLogger extends EventEmitter {
     this.log("debug", ...messages);
   }
 
+  private async writeToFile(
+    logPath: string,
+    message: string,
+    options: SERVER_LOGGER_PROPS,
+    timestamp: string
+  ): Promise<void> {
+    try {
+      console.log("writting to file...");
+      const wrf = options.writeFileMode; //wrf = write file
+      const enc = this.encryptionService;
+      const enc_config = this.config?.encryption;
+
+      // Vérifier si le chiffrement est activé
+      const isEncryptionEnabled =
+        wrf?.crypt?.CRYPT_DATAS?.lockStatus === "enable";
+
+      // Préparer le message final à écrire
+      let finalMessage = message;
+
+      if (wrf?.enable && isEncryptionEnabled) {
+        // Récupérer la clé de chiffrement (fournie par l'utilisateur ou générée)
+        const userKey = wrf.crypt?.CRYPT_DATAS?.key;
+        const key = userKey || enc.generateKey;
+
+        if (!enc.isValidKey(key)) {
+          throw new Error("Invalid key for encryption");
+        }
+
+        // Chiffrer le message
+        const encrypted = enc.encrypt(message, key);
+
+        // Ajouter un préfixe pour indiquer le type de chiffrement
+        if (userKey) {
+          // Si l'utilisateur a fourni une clé, on ajoute un préfixe pour indiquer
+          // que le message est chiffré avec une clé fournie
+          finalMessage = `flag:userkey:${encrypted}`;
+        } else {
+          // Si aucune clé n'a été fournie, on ajoute un préfixe pour indiquer
+          // que le message est chiffré avec une clé générée
+          finalMessage = `flag:nokey:${encrypted}@_k:${key}`;
+        }
+      }
+
+      // Configuration de la rotation des logs
+      const rotationConfig: LogRotationConfig = {
+        maxSize: wrf?.log_rotation?.maxSize || 100,
+        maxFiles: wrf?.log_rotation?.maxFiles || 10,
+        compress: wrf?.log_rotation?.compress || false,
+        interval: wrf?.log_rotation?.interval || "daily",
+      };
+
+      // Écrire le message dans le fichier
+      await this.persistenceService.writeLog(
+        logPath,
+        finalMessage,
+        rotationConfig
+      );
+    } catch (error) {
+      console.error(chalk.red("Error while writing to log file:", error));
+    }
+  }
   // Méthode de log avec options avancées (pour la rétrocompatibilité)
   public logWithOptions(
     options: SERVER_LOGGER_PROPS,
@@ -791,6 +821,53 @@ export class NehonixSmartLogger extends EventEmitter {
   ): void {
     const args = [options, ...messages];
     this.log(...args);
+  }
+
+  public decryptEncFileLog(props: {
+    path: string;
+    mode?: "wrf" | "pwrf";
+    key?: string;
+  }): string {
+    let { path, mode = "wrf", key } = props;
+    const content = fs.readFileSync(path, "utf-8");
+    const enc = this.encryptionService;
+    const enc_config = this.config?.encryption;
+
+    // Traiter chaque ligne séparément
+    const lines = content.split("\n");
+    const decryptedLines = lines.map((line) => {
+      // Ignorer les lignes vides
+      if (!line.trim()) return line;
+
+      try {
+        if (line.includes("flag:userkey:")) {
+          // Message chiffré avec une clé fournie par l'utilisateur
+          if (!key) {
+            return `[ENCRYPTED - Key required] ${line}`;
+          }
+          const encryptedContent = line.split("flag:userkey:")[1];
+          return enc.decrypt(encryptedContent, key);
+        } else if (line.includes("flag:nokey:")) {
+          // Message chiffré avec une clé générée automatiquement
+          const parts = line.split("@_k:");
+          if (parts.length !== 2) {
+            return `[ENCRYPTED - Invalid format] ${line}`;
+          }
+          const encryptedContent = parts[0].split("flag:nokey:")[1];
+          const includedKey = parts[1].trim();
+          return enc.decrypt(encryptedContent, includedKey);
+        } else {
+          // Message non chiffré
+          return line;
+        }
+      } catch (error: unknown) {
+        const errorMessage =
+          error instanceof Error ? error.message : "Unknown error";
+        return `[DECRYPTION ERROR] ${line}\nError: ${errorMessage}`;
+      }
+    });
+
+    return decryptedLines.join("\n");
   }
 }
 

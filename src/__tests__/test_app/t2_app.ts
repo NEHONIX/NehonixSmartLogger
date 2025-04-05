@@ -15,9 +15,9 @@ logger.warn("Test en mode local avec niveau warn");
 // Utilisation de la méthode avancée (rétrocompatibilité)
 logger.logWithOptions(
   {
-    logMode: {
+    writeFileMode: {
       enable: true,
-      name: "test-log",
+      fileName: "test-log2",
     },
     typeOrMessage: "info",
   },

@@ -7,6 +7,7 @@ Une bibliothèque de logging intelligente et sécurisée avec interface de suivi
 - [Fonctionnalités](#fonctionnalités)
 - [Installation](#installation)
 - [Guide de démarrage rapide](#guide-de-démarrage-rapide)
+- [Mode d'écriture des logs](#mode-décriture-des-logs)
 - [Configuration avancée](#configuration-avancée)
 - [Interface Web](#interface-web)
 - [Monitoring des performances](#monitoring-des-performances)
@@ -112,6 +113,50 @@ logger.logWithOptions(
   "Message avec options avancées"
 );
 ```
+
+## Mode d'écriture des logs
+
+NehonixSmartLogger offre un système puissant et flexible pour l'écriture des logs dans des fichiers, avec des fonctionnalités avancées de sécurité et de gestion :
+
+### Caractéristiques principales
+
+- **Chiffrement intégré** : Protégez vos données sensibles avec chiffrement AES-256-CBC
+- **Rotation automatique** : Gestion intelligente de l'espace disque
+- **Compression des archives** : Optimisation du stockage
+- **Formats flexibles** : Support de plusieurs formats de sortie
+
+### Exemple rapide
+
+```typescript
+logger.logWithOptions(
+  {
+    writeFileMode: {
+      enable: true,
+      fileName: "app.log",
+      crypt: {
+        CRYPT_DATAS: {
+          lockStatus: "enable",
+          key: "votre-clé-de-chiffrement", // Optionnel
+        },
+      },
+      log_rotation: {
+        maxSize: 100,
+        interval: "daily",
+      },
+    },
+    typeOrMessage: "info",
+  },
+  "Message à enregistrer"
+);
+```
+
+[![Documentation complète](https://img.shields.io/badge/Documentation-Mode%20d'écriture-blue)](docs/file_logging.md)
+
+> 💡 **[Consultez notre guide détaillé sur le mode d'écriture](docs/file_logging.md)** pour découvrir toutes les fonctionnalités avancées, notamment :
+>
+> - Configuration complète du chiffrement
+> - Gestion de la rotation des logs
+> - Bonnes pratiques et exemples
 
 ## Modes de fonctionnement
 

@@ -23,7 +23,13 @@ export class EncryptionService {
    * @param key La clé de chiffrement (doit être une clé hexadécimale)
    * @returns Le message chiffré au format: iv:encrypted
    */
-  public encrypt(message: string, key: string): string {
+  public encrypt(
+    message: string,
+    key: string,
+    opt?: {
+      returnKey?: boolean;
+    }
+  ): string {
     try {
       // Générer un IV aléatoire
       const iv = crypto.randomBytes(this.ivLength);
@@ -40,7 +46,8 @@ export class EncryptionService {
       encrypted += cipher.final("hex");
 
       // Retourner l'IV et le message chiffré
-      return `${iv.toString("hex")}:${encrypted}`;
+      const msg = `${iv.toString("hex")}:${encrypted}`;
+      return opt?.returnKey ? msg + `@_k:${key}` : msg;
     } catch (error) {
       console.error("Erreur lors du chiffrement:", error);
       return message; // En cas d'erreur, retourner le message original

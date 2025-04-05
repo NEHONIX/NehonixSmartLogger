@@ -1,19 +1,34 @@
+
 export interface SERVER_LOGGER_PROPS {
-  logMode?: {
+  writeFileMode?: {
+    /** Active ou désactive le mode d'écriture dans un fichier par défaut on est en mode console
+     * (on désactive le mode d'écriture dans un fichier)
+     * @default false
+     *  */
     enable?: boolean;
-    name?: string;
+    /** Nom du fichier de log par défaut nehonix_logger.log */
+    fileName?: string;
+    /** Message enregistré lorsque le mode est activé par défaut "enable"
+     * ce message est affiché lorsque l'écriture est réussie.
+     * @default "enable"
+     */
     saved_message?: "enable" | "disable";
+    /** Affiche les logs dans la console par défaut false
+     * @default false
+     */
     display_log?: boolean;
-    maxSize?: number; // Taille maximale en MB
-    maxFiles?: number; // Nombre maximum de fichiers conservés
-    compress?: boolean; // Activer la compression des anciens logs
-    rotationInterval?: "hourly" | "daily" | "weekly";
+    /** Taille maximale d'un fichier de log en MB par défaut 100
+     * @default 100
+     */
+    log_rotation?: LogRotationConfig;
     crypt?: {
+      /** Configuration du chiffrement des données */
       CRYPT_DATAS?: {
         lockStatus: "enable" | "disable";
         key?: string;
         iv?: Buffer;
       };
+      /** Configuration du chiffrement des logs */
       CRYPT_LOGS?: {
         lockStatus: "enable" | "disable";
         key?: string;
@@ -21,10 +36,27 @@ export interface SERVER_LOGGER_PROPS {
       };
     };
   };
+  /** Type ou message à enregistrer */
   typeOrMessage?: string;
+  /** Intervalle de regroupement des logs en millisecondes */
   groupInterval?: number;
 }
 
+export interface LogRotationConfig {
+  maxSize: number; // Taille maximale en MB
+  /** Nombre maximum de fichiers conservés par défaut 10
+   * @default 10
+   */
+  maxFiles: number; // Nombre maximum de fichiers conservés
+  /** Active la compression des anciens logs par défaut false
+   * @default false
+   */
+  compress: boolean; // Activer la compression des anciens logs
+  /** Intervalle de rotation des fichiers de log par défaut "daily"
+   * @default "daily"
+   */
+  interval: "hourly" | "daily" | "weekly";
+}
 /**
  * Représente une application dans le système de logging
  * @interface App

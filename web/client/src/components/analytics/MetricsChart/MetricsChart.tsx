@@ -1,5 +1,4 @@
 import React from "react";
-import { Line } from "react-chartjs-2";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -9,8 +8,10 @@ import {
   Title,
   Tooltip,
   Legend,
+  Filler,
 } from "chart.js";
-import { PerformanceMetrics, TimeRange } from "../../../types/app";
+import { Line } from "react-chartjs-2";
+import { MetricsData } from "../../../types/metrics";
 import "./MetricsChart.scss";
 
 ChartJS.register(
@@ -20,139 +21,126 @@ ChartJS.register(
   LineElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
+  Filler
 );
 
-interface MetricsChartProps {
-  metrics: PerformanceMetrics;
-  timeRange: TimeRange["type"];
+interface Props {
+  data: MetricsData[];
+  timeRange: string;
 }
 
-export const MetricsChart: React.FC<MetricsChartProps> = ({
-  metrics,
-  timeRange,
-}) => {
-  console.log("metrics in metrics chart", metrics);
-  // Vérification de sécurité pour les métriques
-  const safeMetrics = {
-    cpu: {
-      usage: metrics?.cpu?.usage ?? 0,
-      cores: metrics?.cpu?.cores ?? 0,
-    },
-    memory: {
-      used: metrics?.memory?.used ?? 0,
-      free: metrics?.memory?.free ?? 0,
-    },
-    disk: {
-      used: metrics?.disk?.used ?? 0,
-      free: metrics?.disk?.free ?? 0,
-    },
-    network: {
-      bytesReceived:
-        metrics?.network?.interfaces?.[
-          Object.keys(metrics.network.interfaces)[0]
-        ]?.bytesReceived ?? 0,
-      bytesSent:
-        metrics?.network?.interfaces?.[
-          Object.keys(metrics.network.interfaces)[0]
-        ]?.bytesSent ?? 0,
-    },
-  };
-  console.log("safeMetrics in metrics chart", safeMetrics);
-
-  const cpuData = {
-    labels: ["CPU Usage"],
-    datasets: [
-      {
-        label: "CPU Usage (%)",
-        data: [safeMetrics.cpu.usage],
-        borderColor: "rgb(75, 192, 192)",
-        tension: 0.1,
-      },
-    ],
+const MetricsChart: React.FC<Props> = ({ data, timeRange }) => {
+  const formatTime = (timestamp: string) => {
+    const date = new Date(timestamp);
+    return timeRange === "Last hour"
+      ? date.toLocaleTimeString()
+      : date.toLocaleString();
   };
 
-  const memoryData = {
-    labels: ["Memory Usage"],
+  const chartData = {
+    labels: data.map((d) => formatTime(d.timestamp)),
     datasets: [
       {
-        label: "Used Memory (GB)",
-        data: [safeMetrics.memory.used / 1024 / 1024 / 1024],
-        borderColor: "rgb(255, 99, 132)",
-        tension: 0.1,
+        label: "CPU (%)",
+        data: data.map((d) => d.cpu),
+        borderColor: "#007bff",
+        backgroundColor: "rgba(0, 123, 255, 0.1)",
+        fill: true,
+        tension: 0.4,
       },
       {
-        label: "Free Memory (GB)",
-        data: [safeMetrics.memory.free / 1024 / 1024 / 1024],
-        borderColor: "rgb(54, 162, 235)",
-        tension: 0.1,
+        label: "Mémoire (%)",
+        data: data.map((d) => d.memory),
+        borderColor: "#28a745",
+        backgroundColor: "rgba(40, 167, 69, 0.1)",
+        fill: true,
+        tension: 0.4,
+      },
+      {
+        label: "Requêtes/s",
+        data: data.map((d) => d.requests),
+        borderColor: "#ffc107",
+        backgroundColor: "rgba(255, 193, 7, 0.1)",
+        fill: true,
+        tension: 0.4,
       },
     ],
   };
 
   const options = {
     responsive: true,
+    maintainAspectRatio: false,
+    interaction: {
+      mode: "index" as const,
+      intersect: false,
+    },
     plugins: {
       legend: {
         position: "top" as const,
+        labels: {
+          usePointStyle: true,
+          boxWidth: 6,
+        },
       },
-      title: {
-        display: true,
-        text: "Performance Metrics",
+      tooltip: {
+        backgroundColor: "rgba(255, 255, 255, 0.95)",
+        titleColor: "#666",
+        bodyColor: "#333",
+        borderColor: "rgba(0, 0, 0, 0.1)",
+        borderWidth: 1,
+        padding: 12,
+        boxPadding: 6,
+        usePointStyle: true,
       },
     },
     scales: {
+      x: {
+        grid: {
+          display: false,
+        },
+      },
       y: {
         beginAtZero: true,
+        max: 100,
+        grid: {
+          color: "rgba(0, 0, 0, 0.05)",
+        },
       },
     },
+    animation: {
+      duration: 300,
+    },
+  };
+
+  const latestData = data[data.length - 1] || {
+    cpu: 0,
+    memory: 0,
+    requests: 0,
   };
 
   return (
     <div className="metrics-chart">
-      <div className="chart-container">
-        <h3>CPU Usage</h3>
-        <Line options={options} data={cpuData} />
+      <div style={{ height: "400px", marginBottom: "20px" }}>
+        <Line data={chartData} options={options} />
       </div>
-      <div className="chart-container">
-        <h3>Memory Usage</h3>
-        <Line options={options} data={memoryData} />
-      </div>
+
       <div className="metrics-summary">
         <div className="metric-card">
           <h4>CPU</h4>
-          <p>Usage: {safeMetrics.cpu?.usage.toFixed(2)}%</p>
-          <p>Cores: {safeMetrics.cpu?.cores}</p>
+          <div className="current-value">{latestData.cpu.toFixed(1)}%</div>
         </div>
         <div className="metric-card">
-          <h4>Memory</h4>
-          <p>
-            Used: {(safeMetrics.memory.used / 1024 / 1024 / 1024).toFixed(2)} GB
-          </p>
-          <p>
-            Free: {(safeMetrics.memory.free / 1024 / 1024 / 1024).toFixed(2)} GB
-          </p>
+          <h4>Mémoire</h4>
+          <div className="current-value">{latestData.memory.toFixed(1)}%</div>
         </div>
         <div className="metric-card">
-          <h4>Disk</h4>
-          <p>
-            Used: {(safeMetrics.disk.used / 1024 / 1024 / 1024).toFixed(2)} GB
-          </p>
-          <p>
-            Free: {(safeMetrics.disk.free / 1024 / 1024 / 1024).toFixed(2)} GB
-          </p>
-        </div>
-        <div className="metric-card">
-          <h4>Network</h4>
-          <p>
-            Received:{" "}
-            {(safeMetrics.network.bytesReceived / 1024 / 1024).toFixed(2)} MB
-          </p>
-          <p>
-            Sent: {(safeMetrics.network.bytesSent / 1024 / 1024).toFixed(2)} MB
-          </p>
+          <h4>Requêtes/s</h4>
+          <div className="current-value">{latestData.requests}</div>
         </div>
       </div>
     </div>
   );
 };
+
+export default MetricsChart;

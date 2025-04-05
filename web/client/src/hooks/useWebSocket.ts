@@ -43,7 +43,9 @@ export const useWebSocket = (config: WebSocketConfig): WebSocketState => {
   const wsRef = useRef<WebSocket | null>(null);
   const maxReconnectAttempts = 5;
   const reconnectDelay = 3000;
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
 
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -102,6 +104,11 @@ export const useWebSocket = (config: WebSocketConfig): WebSocketState => {
           config.onAuthError?.(message.payload.message);
           break;
         case "logs":
+          console.log("logs in useWebSocket: ", message.payload);
+          if (message.payload) {
+            config.onLogs?.(message.payload);
+          }
+          break;
         case "history":
           if (message.payload) {
             config.onLogs?.(message.payload);

@@ -1,175 +1,150 @@
-import React from "react";
-import { PerformanceMetrics, LogEntry } from "../../../types/app";
-import { Bar } from "react-chartjs-2";
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-} from "chart.js";
+import React, { useEffect, useState } from "react";
+import MetricsChart from "../MetricsChart/MetricsChart";
 import "./PerformanceOverview.scss";
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend
-);
-
-interface PerformanceOverviewProps {
-  metrics: PerformanceMetrics | null;
-  logs: LogEntry[];
+interface PerformanceData {
+  timestamp: string;
+  cpu: number;
+  memory: number;
+  requests: number;
 }
 
-export const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({
-  metrics,
-  logs,
+interface PerformanceOverviewProps {
+  appId: string;
+  timeRange: string;
+}
+
+const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({
+  appId,
+  timeRange,
 }) => {
-  const getPerformanceScore = () => {
-    if (!metrics) return 0;
+  const [data, setData] = useState<PerformanceData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-    const cpuScore = 100 - (metrics.cpu?.usage ?? 0);
-    const memoryScore = metrics.memory?.total
-      ? 100 - ((metrics.memory.used ?? 0) / metrics.memory.total) * 100
-      : 0;
-    const diskScore = metrics.disk?.total
-      ? 100 - ((metrics.disk.used ?? 0) / metrics.disk.total) * 100
-      : 0;
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        // Simuler un appel API pour le moment
+        const mockData = generateMockData(timeRange);
+        setData(mockData);
+        setError(null);
+      } catch (err) {
+        setError("Erreur lors du chargement des données");
+        console.error("Erreur:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    return Math.round((cpuScore + memoryScore + diskScore) / 3);
+    fetchData();
+    // Mettre à jour toutes les 30 secondes
+    const interval = setInterval(fetchData, 30000);
+    return () => clearInterval(interval);
+  }, [appId, timeRange]);
+
+  const generateMockData = (range: string): PerformanceData[] => {
+    const now = new Date();
+    const data: PerformanceData[] = [];
+    let points: number;
+    let interval: number;
+
+    switch (range) {
+      case "1h":
+        points = 60;
+        interval = 60 * 1000; // 1 minute
+        break;
+      case "24h":
+        points = 144;
+        interval = 10 * 60 * 1000; // 10 minutes
+        break;
+      case "7d":
+        points = 168;
+        interval = 60 * 60 * 1000; // 1 hour
+        break;
+      default:
+        points = 60;
+        interval = 60 * 1000;
+    }
+
+    for (let i = points - 1; i >= 0; i--) {
+      const time = new Date(now.getTime() - i * interval);
+      data.push({
+        timestamp: time.toISOString(),
+        cpu: Math.random() * 100,
+        memory: 40 + Math.random() * 30,
+        requests: Math.floor(Math.random() * 200),
+      });
+    }
+
+    return data;
   };
 
-  const getErrorRate = () => {
-    if (!logs.length) return 0;
-    const errorLogs = logs.filter(
-      (log) => log.level === "error" || log.level === "fatal"
+  if (loading) {
+    return (
+      <div className="performance-overview">
+        <div className="loading">Chargement des métriques...</div>
+      </div>
     );
-    return (errorLogs.length / logs.length) * 100;
-  };
+  }
 
-  const getPerformanceStatus = (score: number) => {
-    if (score >= 90) return { text: "Excellent", color: "#28a745" };
-    if (score >= 70) return { text: "Bon", color: "#17a2b8" };
-    if (score >= 50) return { text: "Moyen", color: "#ffc107" };
-    return { text: "Critique", color: "#dc3545" };
-  };
-
-  const performanceData = {
-    labels: ["CPU", "Mémoire", "Disque"],
-    datasets: [
-      {
-        label: "Utilisation (%)",
-        data: metrics
-          ? [
-              metrics.cpu?.usage ?? 0,
-              metrics.memory?.total
-                ? ((metrics.memory.used ?? 0) / metrics.memory.total) * 100
-                : 0,
-              metrics.disk?.total
-                ? ((metrics.disk.used ?? 0) / metrics.disk.total) * 100
-                : 0,
-            ]
-          : [0, 0, 0],
-        backgroundColor: [
-          "rgba(75, 192, 192, 0.5)",
-          "rgba(54, 162, 235, 0.5)",
-          "rgba(255, 206, 86, 0.5)",
-        ],
-        borderColor: [
-          "rgba(75, 192, 192, 1)",
-          "rgba(54, 162, 235, 1)",
-          "rgba(255, 206, 86, 1)",
-        ],
-        borderWidth: 1,
-      },
-    ],
-  };
-
-  const chartOptions = {
-    responsive: true,
-    plugins: {
-      legend: {
-        position: "top" as const,
-      },
-      title: {
-        display: true,
-        text: "Utilisation des Ressources",
-      },
-    },
-    scales: {
-      y: {
-        beginAtZero: true,
-        max: 100,
-      },
-    },
-  };
-
-  const performanceScore = getPerformanceScore();
-  const errorRate = getErrorRate();
-  const status = getPerformanceStatus(performanceScore);
+  if (error) {
+    return (
+      <div className="performance-overview">
+        <div className="error">{error}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="performance-overview">
       <div className="overview-header">
-        <h2>Vue d'Ensemble des Performances</h2>
+        <h2>Vue d'ensemble des performances</h2>
         <div className="performance-score">
           <div
             className="score-circle"
-            style={{ backgroundColor: status.color }}
+            style={{
+              background: `${getScoreColor(getAverageScore(data))}`,
+            }}
           >
-            <span className="score-value">{performanceScore}</span>
+            <span className="score-value">{getAverageScore(data)}</span>
             <span className="score-label">Score</span>
           </div>
-          <div className="score-status" style={{ color: status.color }}>
-            {status.text}
-          </div>
+          <span className="score-status">
+            {getScoreStatus(getAverageScore(data))}
+          </span>
         </div>
       </div>
 
+      <MetricsChart data={data} timeRange={timeRange} />
+
       <div className="overview-grid">
         <div className="overview-card">
-          <h3>Utilisation des Ressources</h3>
-          <Bar options={chartOptions} data={performanceData} />
-        </div>
-
-        <div className="overview-card">
-          <h3>Statistiques</h3>
+          <h3>Statistiques actuelles</h3>
           <div className="stats-grid">
             <div className="stat-item">
-              <span className="stat-label">Taux d'Erreurs</span>
+              <span className="stat-label">CPU</span>
               <span
                 className="stat-value"
-                style={{ color: errorRate > 5 ? "#dc3545" : "#28a745" }}
+                style={{ color: getMetricColor(data[data.length - 1].cpu) }}
               >
-                {errorRate.toFixed(1)}%
+                {data[data.length - 1].cpu.toFixed(1)}%
               </span>
             </div>
             <div className="stat-item">
-              <span className="stat-label">Total des Logs</span>
-              <span className="stat-value">{logs.length}</span>
-            </div>
-            <div className="stat-item">
-              <span className="stat-label">Processus</span>
-              <span className="stat-value">
-                {metrics?.processes?.running !== undefined &&
-                metrics?.processes?.total !== undefined
-                  ? `${metrics.processes.running}/${metrics.processes.total}`
-                  : "N/A"}
+              <span className="stat-label">Mémoire</span>
+              <span
+                className="stat-value"
+                style={{ color: getMetricColor(data[data.length - 1].memory) }}
+              >
+                {data[data.length - 1].memory.toFixed(1)}%
               </span>
             </div>
             <div className="stat-item">
-              <span className="stat-label">Connexions Réseau</span>
+              <span className="stat-label">Requêtes/s</span>
               <span className="stat-value">
-                {metrics?.network?.interfaces !== undefined
-                  ? metrics.network.interfaces[
-                      Object.keys(metrics.network.interfaces)[0]
-                    ].packetsReceived
-                  : "N/A"}
+                {data[data.length - 1].requests}
               </span>
             </div>
           </div>
@@ -178,34 +153,84 @@ export const PerformanceOverview: React.FC<PerformanceOverviewProps> = ({
         <div className="overview-card">
           <h3>Recommandations</h3>
           <ul className="recommendations-list">
-            {performanceScore < 70 && (
-              <li className="recommendation-item warning">
-                Optimisation des ressources recommandée
+            {getRecommendations(data).map((rec, index) => (
+              <li key={index} className={`recommendation-item ${rec.type}`}>
+                {rec.message}
               </li>
-            )}
-            {errorRate > 5 && (
-              <li className="recommendation-item error">
-                Taux d'erreurs élevé - Investigation nécessaire
-              </li>
-            )}
-            {metrics?.processes?.running !== undefined &&
-              metrics?.processes?.total !== undefined &&
-              metrics.processes.running > metrics.processes.total * 0.8 && (
-                <li className="recommendation-item warning">
-                  Nombre élevé de processus en cours d'exécution
-                </li>
-              )}
-            {metrics?.network?.interfaces !== undefined &&
-              metrics.network.interfaces[
-                Object.keys(metrics.network.interfaces)[0]
-              ].packetsReceived > 1000 && (
-                <li className="recommendation-item warning">
-                  Nombre élevé de connexions réseau
-                </li>
-              )}
+            ))}
           </ul>
         </div>
       </div>
     </div>
   );
 };
+
+const getAverageScore = (data: PerformanceData[]): number => {
+  if (data.length === 0) return 0;
+  const lastMetrics = data[data.length - 1];
+  const cpuScore = 100 - lastMetrics.cpu;
+  const memoryScore = 100 - lastMetrics.memory;
+  return Math.round((cpuScore + memoryScore) / 2);
+};
+
+const getScoreColor = (score: number): string => {
+  if (score >= 80) return "#28a745";
+  if (score >= 60) return "#ffc107";
+  return "#dc3545";
+};
+
+const getScoreStatus = (score: number): string => {
+  if (score >= 80) return "Excellent";
+  if (score >= 60) return "Attention requise";
+  return "Critique";
+};
+
+const getMetricColor = (value: number): string => {
+  if (value <= 60) return "#28a745";
+  if (value <= 80) return "#ffc107";
+  return "#dc3545";
+};
+
+const getRecommendations = (
+  data: PerformanceData[]
+): Array<{ type: string; message: string }> => {
+  const recommendations: Array<{ type: string; message: string }> = [];
+  const lastMetrics = data[data.length - 1];
+
+  if (lastMetrics.cpu > 80) {
+    recommendations.push({
+      type: "error",
+      message:
+        "Utilisation CPU critique. Considérez l'augmentation des ressources.",
+    });
+  } else if (lastMetrics.cpu > 60) {
+    recommendations.push({
+      type: "warning",
+      message: "Utilisation CPU élevée. Surveillez la tendance.",
+    });
+  }
+
+  if (lastMetrics.memory > 80) {
+    recommendations.push({
+      type: "error",
+      message:
+        "Utilisation mémoire critique. Vérifiez les fuites de mémoire potentielles.",
+    });
+  } else if (lastMetrics.memory > 60) {
+    recommendations.push({
+      type: "warning",
+      message: "Utilisation mémoire élevée. Optimisation recommandée.",
+    });
+  }
+
+  if (recommendations.length === 0) {
+    recommendations.push({
+      type: "success",
+      message: "Toutes les métriques sont dans les limites normales.",
+    });
+  }
+
+  return recommendations;
+};
+
+export default PerformanceOverview;

@@ -8,11 +8,9 @@
 
 </div>
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/nehonix/nehonixLogger/main/assets/file-logging-banner.png" alt="NehonixLogger File Logging" width="600">
-</p>
+<iframe align="center" src="https://lottie.host/embed/7c915914-a2a7-4145-9b91-2e65409a0406/zzkkCtm6Ld.lottie"></iframe>
 
->  Un système complet pour gérer vos logs avec sécurité et flexibilité
+> Un système complet pour gérer vos logs avec sécurité et flexibilité
 
 Ce guide explique en détail comment utiliser les fonctionnalités avancées d'écriture de logs dans NehonixSmartLogger.
 

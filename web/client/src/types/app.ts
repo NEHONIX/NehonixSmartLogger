@@ -681,8 +681,9 @@ export interface PersistenceConfig {
   retentionPeriod: number;
   /** Active la compression des archives */
   compressArchives: boolean;
+  /** Nombre maximum de fichiers de log */
+  maxFiles: number;
 }
-
 /**
  * Configuration des paramètres réseau
  * @interface NetworkConfig

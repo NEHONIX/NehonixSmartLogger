@@ -533,8 +533,6 @@ export class NehonixSmartLogger extends EventEmitter {
     let messages: unknown[] = args;
     let logLevel: string = "log";
 
-    console.log("options avant modification: ", options);
-
     // Détection du format d'appel
     if (args.length > 0) {
       const firstArg = args[0];
@@ -552,7 +550,7 @@ export class NehonixSmartLogger extends EventEmitter {
         options = lgc.createLoggerConfig(firstArg as SERVER_LOGGER_PROPS);
         messages = args.slice(1);
         logLevel = (options.typeOrMessage as string) || "log";
-        console.log("options après modification: ", options);
+        // console.log("options après modification: ", options);
       }
     }
 
@@ -628,9 +626,9 @@ export class NehonixSmartLogger extends EventEmitter {
         });
       }
     }
- 
+
     // Écriture dans le fichier si activé
-    console.log("options finale: ", options);
+    // console.log("options finale: ", options);
     if (options.writeFileMode?.enable) {
       const logName = formatLogFileName(
         options.writeFileMode.fileName || "nehonix_logger"
@@ -763,7 +761,7 @@ export class NehonixSmartLogger extends EventEmitter {
       console.log("writting to file...");
       const wrf = options.writeFileMode; //wrf = write file
       const enc = this.encryptionService;
-      const enc_config = this.config?.encryption;
+      const enc_config = this.config;
 
       // Vérifier si le chiffrement est activé
       const isEncryptionEnabled =
@@ -788,7 +786,7 @@ export class NehonixSmartLogger extends EventEmitter {
         if (userKey) {
           // Si l'utilisateur a fourni une clé, on ajoute un préfixe pour indiquer
           // que le message est chiffré avec une clé fournie
-          finalMessage = `flag:userkey:${encrypted}`;
+          finalMessage = `flag:usekey:${encrypted}`;
         } else {
           // Si aucune clé n'a été fournie, on ajoute un préfixe pour indiquer
           // que le message est chiffré avec une clé générée
@@ -797,19 +795,36 @@ export class NehonixSmartLogger extends EventEmitter {
       }
 
       // Configuration de la rotation des logs
-      const rotationConfig: LogRotationConfig = {
-        maxSize: wrf?.log_rotation?.maxSize || 100,
-        maxFiles: wrf?.log_rotation?.maxFiles || 10,
-        compress: wrf?.log_rotation?.compress || false,
-        interval: wrf?.log_rotation?.interval || "daily",
+      const remote_persistence = enc_config?.persistence;
+      const local_persistence = wrf?.log_rotation;
+      const isRemotePersistenceEnabled = remote_persistence?.enabled;
+
+      const c1 = {
+        maxSize: remote_persistence?.maxSize || 100,
+        maxFiles: remote_persistence?.maxFiles || 10,
+        compress: remote_persistence?.compressArchives || false,
+        interval: remote_persistence?.rotationInterval || "daily",
       };
 
+      const c2 = {
+        maxSize: local_persistence?.maxSize || 100,
+        maxFiles: local_persistence?.maxFiles || 10,
+        compress: local_persistence?.compress || false,
+        interval: local_persistence?.interval || "daily",
+      };
+
+      const rotationConfig: LogRotationConfig = isRemotePersistenceEnabled
+        ? c1
+        : c2;
+
       // Écrire le message dans le fichier
-      await this.persistenceService.writeLog(
-        logPath,
-        finalMessage,
-        rotationConfig
-      );
+      if (enc_config?.encryption?.enabled) {
+        await this.persistenceService.writeLog(
+          logPath,
+          finalMessage,
+          rotationConfig
+        );
+      }
     } catch (error) {
       console.error(chalk.red("Error while writing to log file:", error));
     }
@@ -840,12 +855,12 @@ export class NehonixSmartLogger extends EventEmitter {
       if (!line.trim()) return line;
 
       try {
-        if (line.includes("flag:userkey:")) {
+        if (line.includes("flag:usekey:")) {
           // Message chiffré avec une clé fournie par l'utilisateur
           if (!key) {
             return `[ENCRYPTED - Key required] ${line}`;
           }
-          const encryptedContent = line.split("flag:userkey:")[1];
+          const encryptedContent = line.split("flag:usekey:")[1];
           return enc.decrypt(encryptedContent, key);
         } else if (line.includes("flag:nokey:")) {
           // Message chiffré avec une clé générée automatiquement

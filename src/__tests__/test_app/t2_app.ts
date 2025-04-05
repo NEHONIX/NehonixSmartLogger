@@ -2,7 +2,7 @@ import { NehonixSmartLogger } from "../../logger";
 
 // Initialisation avec configuration
 const logger = NehonixSmartLogger.from("./test_app_folder").import(
-  "nehonix-config-app with description (4).json"
+  "nehonix-config-docusmart-snai.json"
 );
 
 console.log("=== Test du mode local ===");

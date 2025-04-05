@@ -5,6 +5,8 @@ import {
   UserAction,
   PerformanceMetrics,
 } from "../types/app";
+import { NHX_CONFIG } from "../config/app.conf";
+import { useNavigate } from "react-router-dom";
 
 interface WebSocketConfig {
   wsUrl: string;
@@ -16,11 +18,27 @@ interface WebSocketConfig {
   onCommandResponse?: (response: any) => void;
   onActionsUpdate?: (actions: UserAction[]) => void;
   onMetrics?: (metrics: PerformanceMetrics) => void;
+  onStatusResponse?: (status: StatusResponse) => void;
+  onConnectionError?: (error: string) => void;
 }
 
 export interface Command {
   type: commandType;
   data: any;
+}
+
+export interface StatusResponse {
+  type: "status_response";
+  payload: {
+    success: boolean; // true si tout est OK
+    message: string; // message explicatif
+    status: {
+      userExists: boolean; // l'utilisateur existe
+      appExists: boolean; // l'application existe
+      userHasAccess: boolean; // l'utilisateur a accès à l'application
+      appIsActive: boolean; // l'application est active
+    };
+  };
 }
 
 export interface WebSocketState {
@@ -33,6 +51,8 @@ export interface WebSocketState {
   sendCommand: (command: Command) => void;
   reconnectAttempts: number;
   reconnect: () => void;
+  checkStatus: () => void;
+  status: StatusResponse | null;
 }
 
 export const useWebSocket = (config: WebSocketConfig): WebSocketState => {
@@ -40,12 +60,43 @@ export const useWebSocket = (config: WebSocketConfig): WebSocketState => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const [connectionError, setConnectionError] = useState<string>();
+  const [status, setStatus] = useState<StatusResponse | null>(null);
+  const navigate = useNavigate();
   const wsRef = useRef<WebSocket | null>(null);
   const maxReconnectAttempts = 5;
   const reconnectDelay = 3000;
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null
   );
+  const statusCheckIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
+    null
+  );
+
+  const checkStatus = useCallback(() => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      const checkStatusMessage = {
+        type: "check_status",
+        data: {
+          userId: config.userId,
+          appId: config.appId,
+        },
+      };
+      wsRef.current.send(JSON.stringify(checkStatusMessage));
+    }
+  }, [config.userId, config.appId]);
+
+  const startPeriodicStatusCheck = useCallback(() => {
+    // Arrêter l'intervalle existant s'il y en a un
+    if (statusCheckIntervalRef.current) {
+      clearInterval(statusCheckIntervalRef.current);
+    }
+
+    // Vérifier immédiatement au démarrage
+    checkStatus();
+
+    // Configurer la vérification périodique toutes les 4 secondes pour plus de réactivité
+    statusCheckIntervalRef.current = setInterval(checkStatus, 4 * 1000);
+  }, [checkStatus]);
 
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -68,6 +119,8 @@ export const useWebSocket = (config: WebSocketConfig): WebSocketState => {
           },
         })
       );
+      // Démarrer la vérification périodique du statut
+      startPeriodicStatusCheck();
     };
 
     ws.onclose = () => {
@@ -93,6 +146,38 @@ export const useWebSocket = (config: WebSocketConfig): WebSocketState => {
     ws.onmessage = (event) => {
       const message = JSON.parse(event.data);
       switch (message.type) {
+        case "status_response":
+          const statusResponse = message as StatusResponse;
+          setStatus(statusResponse);
+          config.onStatusResponse?.(statusResponse);
+
+          // Gérer les différents cas d'erreur et mettre à jour le statut immédiatement
+          if (!statusResponse.payload.success) {
+            if (!statusResponse.payload.status.userExists) {
+              navigate(NHX_CONFIG._app_endpoints_.__AUTH__.__LOGIN__);
+            } else if (!statusResponse.payload.status.appExists) {
+              setConnectionError("L'application n'existe plus");
+            } else if (!statusResponse.payload.status.userHasAccess) {
+              navigate(NHX_CONFIG._app_endpoints_.__OTHER__.__UNAUTHORIZED__);
+            } else if (!statusResponse.payload.status.appIsActive) {
+              setConnectionError("L'application est actuellement inactive");
+              // Vérifier à nouveau le statut après un court délai
+              setTimeout(checkStatus, 2000);
+            }
+          } else {
+            // Si la vérification est réussie, on relance l'authentification
+            setConnectionError(undefined);
+            ws.send(
+              JSON.stringify({
+                type: "auth",
+                data: {
+                  userId: config.userId,
+                  appId: config.appId,
+                },
+              })
+            );
+          }
+          break;
         case "auth_success":
           setIsAuthenticated(true);
           config.onAuthSuccess?.();
@@ -129,7 +214,13 @@ export const useWebSocket = (config: WebSocketConfig): WebSocketState => {
     };
 
     wsRef.current = ws;
-  }, [config.wsUrl, config.userId, config.appId, reconnectAttempts]);
+  }, [
+    config.wsUrl,
+    config.userId,
+    config.appId,
+    reconnectAttempts,
+    startPeriodicStatusCheck,
+  ]);
 
   const reconnect = useCallback(() => {
     if (reconnectTimeoutRef.current) {
@@ -143,12 +234,46 @@ export const useWebSocket = (config: WebSocketConfig): WebSocketState => {
   useEffect(() => {
     connect();
     return () => {
+      if (statusCheckIntervalRef.current) {
+        clearInterval(statusCheckIntervalRef.current);
+      }
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }
       wsRef.current?.close();
     };
   }, [connect]);
+
+  // Gestion des erreurs de connexion
+  useEffect(() => {
+    if (!wsRef.current) return;
+
+    wsRef.current.onerror = (error) => {
+      console.error("WebSocket error:", error);
+      setIsConnected(false);
+      config.onConnectionError?.("Erreur de connexion WebSocket");
+    };
+
+    wsRef.current.onclose = () => {
+      console.log("WebSocket connection closed");
+      setIsConnected(false);
+      config.onConnectionError?.("Unable to connect to nehonx server");
+
+      // Tentative de reconnexion automatique après 5 secondes
+      setTimeout(() => {
+        if (!wsRef.current || wsRef.current.readyState === WebSocket.CLOSED) {
+          connect();
+        }
+      }, 5000);
+    };
+
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.onerror = null;
+        wsRef.current.onclose = null;
+      }
+    };
+  }, [config]);
 
   const setFilters = useCallback(
     (filters: { appId: string; level?: string[] }) => {
@@ -220,5 +345,7 @@ export const useWebSocket = (config: WebSocketConfig): WebSocketState => {
     reconnectAttempts,
     reconnect,
     connectionError,
+    checkStatus,
+    status,
   };
 };

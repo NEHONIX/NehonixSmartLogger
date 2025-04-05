@@ -9,9 +9,8 @@
 </div>
 
 <p align="center">
-  <img src="https://lottie.host/embed/7c915914-a2a7-4145-9b91-2e65409a0406/zzkkCtm6Ld.lottie" alt="NehonixLogger File Logging" width="600">
+  <video src="https://lottie.host/embed/7c915914-a2a7-4145-9b91-2e65409a0406/zzkkCtm6Ld.lottie" alt="NehonixLogger File Logging" width="600">
 </p>
-<iframe align="center" src="https://lottie.host/embed/7c915914-a2a7-4145-9b91-2e65409a0406/zzkkCtm6Ld.lottie"></iframe>
 
 > Un système complet pour gérer vos logs avec sécurité et flexibilité
 

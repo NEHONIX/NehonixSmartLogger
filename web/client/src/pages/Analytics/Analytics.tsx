@@ -17,6 +17,7 @@ import { useWebSocket } from "../../hooks/useWebSocket";
 import { NHX_CONFIG } from "../../config/app.conf";
 import { useAuth } from "../../contexts/AuthContext";
 import { useSetPageTitle } from "../../utils/setPageTitle";
+import ErrorDisplay from "../../components/common/ErrorDisplay/ErrorDisplay";
 
 const Analytics: React.FC = () => {
   const { appId } = useParams<{ appId: string }>();
@@ -34,55 +35,109 @@ const Analytics: React.FC = () => {
     type: "day",
   });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<{
+    type: "AUTH_ERR" | "WS_ERR" | "APP_ERR" | "FETCH_ERR" | "UNKNOWN_ERR";
+    message: string;
+  } | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const { apps, fetchApps, isLoading: isLoadingApps } = useFecthApps();
   const { user } = useAuth();
+  const [appStatus, setAppStatus] = useState<{
+    isActive: boolean;
+    lastUpdate: string;
+  }>({ isActive: false, lastUpdate: new Date().toISOString() });
 
-  // Connexion WebSocket avec gestion des métriques
-  const { isConnected, setFilters, sendCommand, isAuthenticated } =
-    useWebSocket({
-      wsUrl: NHX_CONFIG._global_.__WEBSOCKET_URL__,
-      appId: appId || "",
-      userId: user?.uid || "",
-      onLogs: (newLogs) => {
-        console.log("new logs: ", newLogs);
-        setLogs((prev) => {
-          const updatedLogs = [...prev, ...newLogs];
-          // Limiter à 1000 logs pour la performance
-          return updatedLogs.slice(-1000);
+  // Connexion WebSocket avec gestion des métriques et du statut
+  const {
+    isConnected,
+    setFilters,
+    sendCommand,
+    isAuthenticated,
+    checkStatus,
+    reconnect,
+  } = useWebSocket({
+    wsUrl: NHX_CONFIG._global_.__WEBSOCKET_URL__,
+    appId: appId || "",
+    userId: user?.uid || "",
+    onAuthSuccess() {
+      // Réinitialiser les erreurs lors d'une authentification réussie
+      setError(null);
+      // Vérifier immédiatement le statut après l'authentification
+      checkStatus();
+    },
+    onStatusResponse(status) {
+      console.log("status: ", status);
+      if (!status.payload.success) {
+        setError({
+          type: "APP_ERR",
+          message: status.payload.message || "L'application est inactive",
         });
-      },
-      onMetrics: (newMetrics) => {
-        const timestamp = new Date().toISOString();
-        setMetricsData((prev) => {
-          const newData = [
-            ...prev,
-            {
-              timestamp,
-              cpu: newMetrics.cpu?.usage ?? 0,
-              memory: newMetrics.memory
-                ? (newMetrics.memory.used / newMetrics.memory.total) * 100
-                : 0,
-              requests:
-                newMetrics.network?.interfaces?.[
-                  Object.keys(newMetrics.network.interfaces)[0]
-                ]?.packetsReceived ?? 0,
-            },
-          ];
-          // Garder seulement les dernières 60 minutes de données pour "hour",
-          // 144 points pour "day" (10 minutes d'intervalle),
-          // ou 168 points pour "week" (1 heure d'intervalle)
-          const maxPoints =
-            timeRange.type === "hour"
-              ? 60
-              : timeRange.type === "day"
-              ? 144
-              : 168;
-          return newData.slice(-maxPoints);
+        return;
+      }
+
+      // Ne réinitialiser l'erreur que si le statut est un succès
+      if (status.payload.status.appIsActive) {
+        setError(null);
+      } else {
+        setError({
+          type: "APP_ERR",
+          message: "L'application est actuellement inactive",
         });
-        setLoading(false);
-      },
-    });
+      }
+
+      // Mise à jour du statut en temps réel
+      setAppStatus({
+        isActive: status.payload.status.appIsActive,
+        lastUpdate: new Date().toISOString(),
+      });
+    },
+    onAuthError(error) {
+      setError({
+        type: "AUTH_ERR",
+        message: error || "Erreur d'authentification",
+      });
+    },
+    onConnectionError(error) {
+      setError({
+        type: "WS_ERR",
+        message: error || "Erreur de connexion au serveur",
+      });
+    },
+    onLogs: (newLogs) => {
+      console.log("new logs: ", newLogs);
+      setLogs((prev) => {
+        const updatedLogs = [...prev, ...newLogs];
+        // Limiter à 1000 logs pour la performance
+        return updatedLogs.slice(-1000);
+      });
+    },
+    onMetrics: (newMetrics) => {
+      const timestamp = new Date().toISOString();
+      setMetricsData((prev) => {
+        const newData = [
+          ...prev,
+          {
+            timestamp,
+            cpu: newMetrics.cpu?.usage ?? 0,
+            memory: newMetrics.memory
+              ? (newMetrics.memory.used / newMetrics.memory.total) * 100
+              : 0,
+            requests:
+              newMetrics.network?.interfaces?.[
+                Object.keys(newMetrics.network.interfaces)[0]
+              ]?.packetsReceived ?? 0,
+          },
+        ];
+        // Garder seulement les dernières 60 minutes de données pour "hour",
+        // 144 points pour "day" (10 minutes d'intervalle),
+        // ou 168 points pour "week" (1 heure d'intervalle)
+        const maxPoints =
+          timeRange.type === "hour" ? 60 : timeRange.type === "day" ? 144 : 168;
+        return newData.slice(-maxPoints);
+      });
+      setLoading(false);
+    },
+  });
 
   useEffect(() => {
     if (!appId) return;
@@ -92,7 +147,7 @@ const Analytics: React.FC = () => {
   const app = apps.find((app) => app.id === appId);
 
   useSetPageTitle({
-    title: `  Real-time analytics  ●  ${app?.name} `,
+    title: `  Real-time analytics  ●  ${app?.name || "U"} `,
     description: "Analyse des performances de l'application",
   });
 
@@ -116,9 +171,33 @@ const Analytics: React.FC = () => {
     }
   }, [appId, setFilters]);
 
+  // Vérifier le statut de connexion
+  useEffect(() => {
+    if (!isConnected) {
+      setError({
+        type: "WS_ERR",
+        message: "Connection to server lost",
+      });
+    }
+  }, [isConnected]);
+
+  // Vérifier périodiquement le statut
+  useEffect(() => {
+    const statusCheckInterval = setInterval(() => {
+      if (isConnected && isAuthenticated) {
+        checkStatus();
+      }
+    }, 10000); // Vérifier toutes les 10 secondes
+
+    return () => clearInterval(statusCheckInterval);
+  }, [isConnected, isAuthenticated, checkStatus]);
+
   const handleTimeRangeChange = (
     event: React.ChangeEvent<HTMLSelectElement>
   ) => {
+    // Vérifier le statut avant de changer la plage de temps
+    checkStatus();
+
     const newType = event.target.value as TimeRange["type"];
     const now = new Date();
     let start = new Date();
@@ -158,10 +237,20 @@ const Analytics: React.FC = () => {
     );
   }
 
+  if (error?.type) {
+    return (
+      <ErrorDisplay
+        type={error.type}
+        message={error.message}
+        onRetry={error.type === "AUTH_ERR" ? reconnect : undefined}
+      />
+    );
+  }
+
   return (
     <div className="analytics">
       <div className="analytics-header">
-        <span style={{ color: isConnected ? "green" : "red" }}>
+        <span style={{ color: appStatus.isActive ? "green" : "red" }}>
           {NHX_CONFIG._app_info_.__SHORT_NAME} ●
         </span>{" "}
         <div className="time-range-selector">
@@ -180,10 +269,10 @@ const Analytics: React.FC = () => {
             <span
               style={{
                 fontWeight: "bold",
-                color: app?.status === "active" ? "green" : "red",
+                color: appStatus.isActive ? "green" : "red",
               }}
             >
-              {app?.status}
+              {appStatus.isActive ? "active" : "inactive"}
             </span>
           </p>
           <p>

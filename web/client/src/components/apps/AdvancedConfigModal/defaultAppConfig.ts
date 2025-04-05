@@ -1,7 +1,7 @@
 import { CreateAppConfig } from "../../../types/app";
 
 export const defaultAppConfig: CreateAppConfig = {
-  logLevel: "debug",
+  logLevel: "info" as const,
   encryption: {
     enabled: false,
     key: "",
@@ -11,14 +11,15 @@ export const defaultAppConfig: CreateAppConfig = {
     showTimestamp: true,
     showLogLevel: true,
     colorized: true,
-    format: "simple",
+    format: "simple" as const,
   },
   persistence: {
-    enabled: false,
+    enabled: true,
     maxSize: 100,
-    rotationInterval: "daily",
+    rotationInterval: "daily" as const,
     retentionPeriod: 30,
     compressArchives: true,
+    maxFiles: 10,
   },
   network: {
     batchSize: 50,
@@ -29,7 +30,7 @@ export const defaultAppConfig: CreateAppConfig = {
     maxOfflineSize: 50,
   },
   performance: {
-    enabled: false,
+    enabled: true,
     samplingRate: 10,
     maxEventsPerSecond: 100,
     monitorMemory: true,

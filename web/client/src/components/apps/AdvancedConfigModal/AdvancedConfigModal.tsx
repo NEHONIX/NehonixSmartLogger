@@ -118,6 +118,7 @@ export const AdvancedConfigModal: React.FC<AdvancedConfigModalProps> = ({
       rotationInterval: "daily",
       retentionPeriod: 30,
       compressArchives: true,
+      maxFiles: 10,
     };
     updateConfig("persistence", { ...currentConfig, ...changes });
   };
@@ -423,6 +424,21 @@ export const AdvancedConfigModal: React.FC<AdvancedConfigModalProps> = ({
                       onChange={(e) =>
                         handlePersistenceChange({
                           retentionPeriod: Number(e.target.value),
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label htmlFor="maxFiles">Nombre maximum de fichiers</label>
+                    <input
+                      type="number"
+                      id="maxFiles"
+                      min="1"
+                      value={config.persistence.maxFiles}
+                      onChange={(e) =>
+                        handlePersistenceChange({
+                          maxFiles: Number(e.target.value),
                         })
                       }
                     />

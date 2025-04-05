@@ -1,0 +1,54 @@
+{
+  "user": {
+    "userId": "nehonix_719d48ac-35a6-4931-83d4-4ae52b8c7d38"
+  },
+  "app": {
+    "provider": "nehonix",
+    "apiKey": "nehonix@7a225ef279ec22947e4fc5278cbf86c0fc3fab8c1fc23f27c473a892d1bb2849.nsl",
+    "appId": "75afdf22-8ae2-429e-b7f1-12a285edcf0d",
+    "name": "DocuSmart-SNAI"
+  },
+  "logLevel": "info",
+  "encryption": {
+    "enabled": false,
+    "key": ""
+  },
+  "console": {
+    "enabled": true,
+    "showTimestamp": true,
+    "showLogLevel": true,
+    "colorized": true,
+    "format": "simple"
+  },
+  "persistence": {
+    "enabled": true,
+    "maxSize": 100,
+    "rotationInterval": "daily",
+    "retentionPeriod": 30,
+    "compressArchives": true,
+    "maxFiles": 10
+  },
+  "network": {
+    "batchSize": 50,
+    "retryAttempts": 3,
+    "retryDelay": 1000,
+    "timeout": 5000,
+    "offlineStorage": true,
+    "maxOfflineSize": 50
+  },
+  "performance": {
+    "enabled": true,
+    "samplingRate": 10,
+    "maxEventsPerSecond": 100,
+    "monitorMemory": true,
+    "monitorCPU": true
+  },
+  "monitoring": {
+    "enabled": true,
+    "samplingRate": 10,
+    "maxEventsPerSecond": 100,
+    "monitorMemory": true,
+    "monitorCPU": true,
+    "monitorNetwork": true
+  }
+}

@@ -1,4 +1,3 @@
-
 export interface SERVER_LOGGER_PROPS {
   writeFileMode?: {
     /** Active ou désactive le mode d'écriture dans un fichier par défaut on est en mode console
@@ -632,6 +631,8 @@ export interface PersistenceConfig {
   retentionPeriod: number;
   /** Active la compression des archives */
   compressArchives: boolean;
+  /** Nombre maximum de fichiers de log */
+  maxFiles: number;
 }
 
 /**

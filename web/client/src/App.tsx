@@ -7,6 +7,7 @@ import { AppRoutes } from "./routes/AppRoutes";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import { FecthAppsProvider } from "./hooks/fetchAppsContext";
 
 export const App: React.FC = () => {
   useTheme();
@@ -16,7 +17,9 @@ export const App: React.FC = () => {
       <BrowserRouter>
         <ToastContainer />
         <AuthProvider>
-          <AppRoutes />
+          <FecthAppsProvider>
+            <AppRoutes />
+          </FecthAppsProvider>
         </AuthProvider>
       </BrowserRouter>
     </ThemeProvider>

@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { NSLUserDataInterface, RegisterCredentials } from "../types/auth";
 import { authApi } from "../services/api";
 import { toast } from "react-toastify";
+import { useFecthApps } from "../hooks/fetchAppsContext";
 
 interface AuthContextType {
   user: NSLUserDataInterface | null;

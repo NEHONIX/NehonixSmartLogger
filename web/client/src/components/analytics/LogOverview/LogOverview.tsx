@@ -45,7 +45,7 @@ const LogOverview: React.FC<Props> = ({ logs, timeRange }) => {
     logs.forEach((log) => {
       // Comptage des niveaux
       if (log.level) {
-        levelCounts[log.level as keyof typeof levelCounts]++;
+        levelCounts[log.level.toUpperCase() as keyof typeof levelCounts]++;
       }
 
       // Distribution horaire
@@ -70,7 +70,7 @@ const LogOverview: React.FC<Props> = ({ logs, timeRange }) => {
       .slice(0, 5);
 
     return {
-      levelCounts,
+      levelCounts: levelCounts,
       hourlyDistribution,
       topErrors,
       avgResponseTime: responseTimeCount
@@ -127,17 +127,39 @@ const LogOverview: React.FC<Props> = ({ logs, timeRange }) => {
       <div className="overview-grid">
         <div className="chart-card level-distribution">
           <h3>Distribution des niveaux de logs</h3>
-          <div className="chart-container">
-            <Doughnut
-              data={levelChartData}
-              options={{
-                plugins: {
-                  legend: {
-                    position: "right",
-                  },
-                },
-              }}
-            />
+          <div className="progress-bars-container">
+            {Object.entries(levelChartData.datasets[0].data).map(
+              (entry, index) => {
+                const level = levelChartData.labels[index];
+                const value = entry[1];
+                const color = levelChartData.datasets[0].backgroundColor[index];
+                const percentage =
+                  (value /
+                    levelChartData.datasets[0].data.reduce(
+                      (a, b) => a + b,
+                      0
+                    )) *
+                  100;
+
+                return (
+                  <div key={level} className="progress-bar-wrapper">
+                    <div className="progress-bar-label">
+                      <span>{level}</span>
+                      <span>{Math.round(percentage)}%</span>
+                    </div>
+                    <div className="progress-bar-background">
+                      <div
+                        className="progress-bar-fill"
+                        style={{
+                          width: `${percentage}%`,
+                          backgroundColor: color,
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              }
+            )}
           </div>
         </div>
 

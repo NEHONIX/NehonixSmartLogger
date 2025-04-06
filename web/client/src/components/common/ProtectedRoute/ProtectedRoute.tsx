@@ -39,6 +39,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // Vérifier si l'utilisateur a le bon type pour accéder à la route
   if (allowedTargets && user && !allowedTargets.includes(user.target)) {
+    // console.log("user is not allowed to access this route");
     return (
       <Navigate
         to={NHX_CONFIG._app_endpoints_.__OTHER__.__UNAUTHORIZED__}

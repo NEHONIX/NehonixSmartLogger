@@ -158,7 +158,7 @@ export const useWebSocket = (config: WebSocketConfig): WebSocketState => {
             } else if (!statusResponse.payload.status.appExists) {
               setConnectionError("L'application n'existe plus");
             } else if (!statusResponse.payload.status.userHasAccess) {
-              navigate(NHX_CONFIG._app_endpoints_.__OTHER__.__UNAUTHORIZED__);
+              // navigate(NHX_CONFIG._app_endpoints_.__OTHER__.__UNAUTHORIZED__);
             } else if (!statusResponse.payload.status.appIsActive) {
               setConnectionError("L'application est actuellement inactive");
               // Vérifier à nouveau le statut après un court délai
@@ -187,6 +187,15 @@ export const useWebSocket = (config: WebSocketConfig): WebSocketState => {
         case "auth_error":
           setIsAuthenticated(false);
           config.onAuthError?.(message.payload.message);
+          ws.send(
+            JSON.stringify({
+              type: "auth",
+              data: {
+                userId: config.userId,
+                appId: config.appId,
+              },
+            })
+          );
           break;
         case "logs":
           console.log("logs in useWebSocket: ", message.payload);
@@ -201,6 +210,7 @@ export const useWebSocket = (config: WebSocketConfig): WebSocketState => {
           break;
         case "metrics":
           if (message.payload) {
+            console.warn("metrics in useWebSocket: ", message.payload);
             config.onMetrics?.(message.payload);
           }
           break;
@@ -246,6 +256,7 @@ export const useWebSocket = (config: WebSocketConfig): WebSocketState => {
 
   // Gestion des erreurs de connexion
   useEffect(() => {
+    console.warn("test");
     if (!wsRef.current) return;
 
     wsRef.current.onerror = (error) => {
@@ -273,7 +284,7 @@ export const useWebSocket = (config: WebSocketConfig): WebSocketState => {
         wsRef.current.onclose = null;
       }
     };
-  }, [config]);
+  }, [wsRef.current]);
 
   const setFilters = useCallback(
     (filters: { appId: string; level?: string[] }) => {

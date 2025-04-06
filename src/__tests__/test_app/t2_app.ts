@@ -2,7 +2,7 @@ import { NehonixSmartLogger } from "../../logger";
 
 // Initialisation avec configuration
 const logger = NehonixSmartLogger.from("./test_app_folder").import(
-  "nehonix-config-docusmart-snai.json"
+  "nehonix-config-my super app with config (1).json"
 );
 
 console.log("=== Test du mode local ===");
@@ -13,16 +13,16 @@ logger.error("Test en mode local avec niveau error");
 logger.warn("Test en mode local avec niveau warn");
 
 // Utilisation de la méthode avancée (rétrocompatibilité)
-logger.logWithOptions(
-  {
-    writeFileMode: {
-      enable: true,
-      fileName: "test-log2",
-    },
-    typeOrMessage: "info",
-  },
-  "Test avec options avancées"
-);
+// logger.logWithOptions(
+//   {
+//     writeFileMode: {
+//       enable: true,
+//       fileName: "test-log3",
+//     },
+//     typeOrMessage: "info",
+//   },
+//   "Test avec options avancées"
+// );
 
 console.log("=== Test du mode distant ===");
 // Activation du mode remote

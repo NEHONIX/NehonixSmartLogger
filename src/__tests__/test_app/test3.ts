@@ -3,7 +3,7 @@ import fs from "fs";
 import path from "path";
 
 const logger = NehonixSmartLogger.from("./test_app_folder").import(
-  "nehonix-config-test app.json"
+  "nehonix-config-my super app with config (1).json"
 );
 // logger.enableRemoteMode();
 

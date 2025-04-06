@@ -127,9 +127,9 @@ export class NHX_CONFIG {
       __REGISTER__: "/auth/register",
     },
     _MAIN__: {
-      __DASHBOARD__: "/dashboard",
-      __LOGS__: "/logs",
-      __ANALYTICS__: "/analytics",
+      __DASHBOARD__: "/app/dashboard",
+      __LOGS__: "/app/logs",
+      __ANALYTICS__: "/app/analytics",
     },
     __OTHER__: {
       __UNAUTHORIZED__: "/unauthorized",

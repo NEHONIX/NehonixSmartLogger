@@ -1206,3 +1206,5 @@ export interface UserAction {
     platform?: string;
   };
 }
+
+export type PageSourceParam = "sidebar" | "full";

@@ -218,9 +218,6 @@ export class NehonixSmartLogger extends EventEmitter {
           this.handleLogs(message.payload.logs);
         }
         break;
-      case "metrics":
-        // Ne plus traiter les métriques reçues du serveur car nous envoyons les nôtres
-        break;
       case "connect":
         if (message.payload.appId && message.payload.userId) {
           this.setCredentials(message.payload.userId, message.payload.appId);
@@ -374,7 +371,7 @@ export class NehonixSmartLogger extends EventEmitter {
       this.wsClient?.readyState === WebSocket.OPEN
     ) {
       const message: WebSocketMessage = {
-        type: "metrics",
+        type: "send_metrics",
         data: {
           userId: this.userId || "",
           appId: this.appId || "",

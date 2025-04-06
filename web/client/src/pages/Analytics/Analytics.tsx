@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import {
   PerformanceMetrics,
   LogEntry,
   Anomaly,
   TimeRange,
+  PageSourceParam,
 } from "../../types/app";
 import { appApi } from "../../services/appApi";
 import MetricsChart from "../../components/analytics/MetricsChart/MetricsChart";
@@ -12,12 +13,13 @@ import PerformanceOverview from "../../components/analytics/PerformanceOverview/
 import { AnomalyDetection } from "../../components/analytics/AnomalyDetection/AnomalyDetection";
 import LogOverview from "../../components/analytics/LogOverview/LogOverview";
 import "./Analytics.scss";
-import { useFecthApps } from "../../hooks/useFetchApps";
+import { useFecthApps } from "../../hooks/fetchAppsContext";
 import { useWebSocket } from "../../hooks/useWebSocket";
 import { NHX_CONFIG } from "../../config/app.conf";
 import { useAuth } from "../../contexts/AuthContext";
 import { useSetPageTitle } from "../../utils/setPageTitle";
 import ErrorDisplay from "../../components/common/ErrorDisplay/ErrorDisplay";
+import SideBarComponentMode from "../../components/actions/SideBarComponentMode";
 
 const Analytics: React.FC = () => {
   const { appId } = useParams<{ appId: string }>();
@@ -40,109 +42,106 @@ const Analytics: React.FC = () => {
     message: string;
   } | null>(null);
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const { apps, fetchApps, isLoading: isLoadingApps } = useFecthApps();
+  const { apps, isLoading: isLoadingApps } = useFecthApps();
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const mode = searchParams.get("_src") as PageSourceParam;
   const [appStatus, setAppStatus] = useState<{
     isActive: boolean;
     lastUpdate: string;
   }>({ isActive: false, lastUpdate: new Date().toISOString() });
 
   // Connexion WebSocket avec gestion des métriques et du statut
-  const {
-    isConnected,
-    setFilters,
-    sendCommand,
-    isAuthenticated,
-    checkStatus,
-    reconnect,
-  } = useWebSocket({
-    wsUrl: NHX_CONFIG._global_.__WEBSOCKET_URL__,
-    appId: appId || "",
-    userId: user?.uid || "",
-    onAuthSuccess() {
-      // Réinitialiser les erreurs lors d'une authentification réussie
-      setError(null);
-      // Vérifier immédiatement le statut après l'authentification
-      checkStatus();
-    },
-    onStatusResponse(status) {
-      console.log("status: ", status);
-      if (!status.payload.success) {
-        setError({
-          type: "APP_ERR",
-          message: status.payload.message || "L'application est inactive",
-        });
-        return;
-      }
-
-      // Ne réinitialiser l'erreur que si le statut est un succès
-      if (status.payload.status.appIsActive) {
+  const { isConnected, setFilters, isAuthenticated, checkStatus, reconnect } =
+    useWebSocket({
+      wsUrl: NHX_CONFIG._global_.__WEBSOCKET_URL__,
+      appId: appId || "",
+      userId: user?.uid || "",
+      onAuthSuccess() {
+        // Réinitialiser les erreurs lors d'une authentification réussie
         setError(null);
-      } else {
-        setError({
-          type: "APP_ERR",
-          message: "L'application est actuellement inactive",
+        // Vérifier immédiatement le statut après l'authentification
+        checkStatus();
+      },
+      onStatusResponse(status) {
+        console.log("status: ", status);
+        if (!status.payload.success) {
+          setError({
+            type: "APP_ERR",
+            message: status.payload.message || "L'application est inactive",
+          });
+          return;
+        }
+
+        // Ne réinitialiser l'erreur que si le statut est un succès
+        if (status.payload.status.appIsActive) {
+          setError(null);
+        } else {
+          setError({
+            type: "APP_ERR",
+            message: "L'application est actuellement inactive",
+          });
+        }
+
+        // Mise à jour du statut en temps réel
+        setAppStatus({
+          isActive: status.payload.status.appIsActive,
+          lastUpdate: new Date().toISOString(),
         });
-      }
-
-      // Mise à jour du statut en temps réel
-      setAppStatus({
-        isActive: status.payload.status.appIsActive,
-        lastUpdate: new Date().toISOString(),
-      });
-    },
-    onAuthError(error) {
-      setError({
-        type: "AUTH_ERR",
-        message: error || "Erreur d'authentification",
-      });
-    },
-    onConnectionError(error) {
-      setError({
-        type: "WS_ERR",
-        message: error || "Erreur de connexion au serveur",
-      });
-    },
-    onLogs: (newLogs) => {
-      console.log("new logs: ", newLogs);
-      setLogs((prev) => {
-        const updatedLogs = [...prev, ...newLogs];
-        // Limiter à 1000 logs pour la performance
-        return updatedLogs.slice(-1000);
-      });
-    },
-    onMetrics: (newMetrics) => {
-      const timestamp = new Date().toISOString();
-      setMetricsData((prev) => {
-        const newData = [
-          ...prev,
-          {
-            timestamp,
-            cpu: newMetrics.cpu?.usage ?? 0,
-            memory: newMetrics.memory
-              ? (newMetrics.memory.used / newMetrics.memory.total) * 100
-              : 0,
-            requests:
-              newMetrics.network?.interfaces?.[
-                Object.keys(newMetrics.network.interfaces)[0]
-              ]?.packetsReceived ?? 0,
-          },
-        ];
-        // Garder seulement les dernières 60 minutes de données pour "hour",
-        // 144 points pour "day" (10 minutes d'intervalle),
-        // ou 168 points pour "week" (1 heure d'intervalle)
-        const maxPoints =
-          timeRange.type === "hour" ? 60 : timeRange.type === "day" ? 144 : 168;
-        return newData.slice(-maxPoints);
-      });
-      setLoading(false);
-    },
-  });
-
-  useEffect(() => {
-    if (!appId) return;
-    fetchApps({ opt: { useCache: true } });
-  }, [appId]);
+      },
+      onAuthError(error) {
+        setError({
+          type: "AUTH_ERR",
+          message: error || "Erreur d'authentification",
+        });
+      },
+      onConnectionError(error) {
+        setError({
+          type: "WS_ERR",
+          message: error || "Erreur de connexion au serveur",
+        });
+      },
+      onLogs: (newLogs) => {
+        // console.log("new logs: ", newLogs);
+        setLogs((prev) => {
+          const updatedLogs = [...prev, ...newLogs];
+          // Limiter à 1000 logs pour la performance
+          return updatedLogs.slice(-1000);
+        });
+      },
+      onMetrics: (newMetrics) => {
+        const timestamp = new Date().toISOString();
+        console.warn("newMetrics: ", newMetrics);
+        setMetricsData((prev) => {
+          const newData = [
+            ...prev,
+            {
+              timestamp,
+              cpu: newMetrics.cpu?.usage ?? 0,
+              memory: newMetrics.memory
+                ? (newMetrics.memory.used / newMetrics.memory.total) * 100
+                : 0,
+              requests:
+                newMetrics.network?.interfaces?.[
+                  Object.keys(newMetrics.network.interfaces)[0]
+                ]?.packetsReceived ?? 0,
+            },
+          ];
+          // Garder seulement les dernières 60 minutes de données pour "hour",
+          // 144 points pour "day" (10 minutes d'intervalle),
+          // ou 168 points pour "week" (1 heure d'intervalle)
+          const maxPoints =
+            timeRange.type === "hour"
+              ? 60
+              : timeRange.type === "day"
+              ? 144
+              : 168;
+          return newData.slice(-maxPoints);
+        });
+        setLoading(false);
+      },
+    });
 
   const app = apps.find((app) => app.id === appId);
 
@@ -152,17 +151,17 @@ const Analytics: React.FC = () => {
   });
 
   // Demander les métriques via WebSocket
-  useEffect(() => {
-    if (isConnected && appId) {
-      // Demander les métriques en temps réel
-      sendCommand({
-        type: "get_metrics",
-        data: {
-          timeRange: timeRange.type,
-        },
-      });
-    }
-  }, [isConnected, appId, timeRange.type, sendCommand]);
+  // useEffect(() => {
+  //   if (isConnected && appId) {
+  //     // Demander les métriques en temps réel
+  //     sendCommand({
+  //       type: "get_metrics",
+  //       data: {
+  //         timeRange: timeRange.type,
+  //       },
+  //     });
+  //   }
+  // }, [isConnected, appId, timeRange.type, sendCommand]);
 
   // Mise à jour des filtres WebSocket
   useEffect(() => {
@@ -225,6 +224,15 @@ const Analytics: React.FC = () => {
     return <div>Fetching apps...</div>;
   }
 
+  if (mode === "sidebar") {
+    return (
+      <SideBarComponentMode
+        message="Select an app to see the analytics"
+        navigateTo={`${NHX_CONFIG._app_endpoints_._MAIN__.__ANALYTICS__}`}
+      />
+    );
+  }
+
   if (!appId) {
     return (
       <div className="analytics">
@@ -250,9 +258,15 @@ const Analytics: React.FC = () => {
   return (
     <div className="analytics">
       <div className="analytics-header">
-        <span style={{ color: appStatus.isActive ? "green" : "red" }}>
-          {NHX_CONFIG._app_info_.__SHORT_NAME} ●
-        </span>{" "}
+        <div className="app-name">
+          <div
+            className={`status-dot ${
+              appStatus.isActive ? "active" : "inactive"
+            }`}
+          />
+          {NHX_CONFIG._app_info_.__SHORT_NAME}
+        </div>
+
         <div className="time-range-selector">
           <select
             value={timeRange.type}
@@ -264,44 +278,48 @@ const Analytics: React.FC = () => {
             <option value="week">Last week</option>
           </select>
         </div>
+
         <div className="app_details">
-          <p>
-            <span
-              style={{
-                fontWeight: "bold",
-                color: appStatus.isActive ? "green" : "red",
-              }}
-            >
-              {appStatus.isActive ? "active" : "inactive"}
-            </span>
-          </p>
-          <p>
-            <span
-              style={{
-                fontWeight: "bold",
-                color: isConnected ? "green" : "red",
-              }}
-            >
-              {isConnected ? "Connected" : "Disconnected"}
-            </span>
-          </p>
-          <p>
-            <span
-              style={{
-                fontWeight: "bold",
-                color: isAuthenticated ? "green" : "red",
-              }}
-            >
-              {isAuthenticated ? "Authenticated" : "Unauthenticated"}
-            </span>
-          </p>
+          <div
+            className={`status-indicator ${
+              appStatus.isActive ? "active" : "inactive"
+            }`}
+          >
+            <div className="indicator-dot" />
+            <span>{appStatus.isActive ? "Active" : "Inactive"}</span>
+          </div>
+
+          <div
+            className={`status-indicator ${
+              isConnected ? "connected" : "disconnected"
+            }`}
+          >
+            <div className="indicator-dot" />
+            <span>{isConnected ? "Connected" : "Disconnected"}</span>
+          </div>
+
+          <div
+            className={`status-indicator ${
+              isAuthenticated ? "authenticated" : "unauthenticated"
+            }`}
+          >
+            <div className="indicator-dot" />
+            <span>{isAuthenticated ? "Authenticated" : "Unauthenticated"}</span>
+          </div>
         </div>
       </div>
 
       <div className="analytics-content">
+        <button
+          onClick={() =>
+            navigate(`${NHX_CONFIG._app_endpoints_._MAIN__.__LOGS__}/${appId}`)
+          }
+        >
+          View logs
+        </button>
         <div className="analytics-details">
           {loading ? (
-            <div className="loading">Fetching metrics data...</div>
+            <div className="loading">Awaiting for metrics data...</div>
           ) : (
             <>
               <div className="metrics-section">

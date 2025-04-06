@@ -20,7 +20,7 @@ export const Sidebar: React.FC = () => {
         </li>
         <li>
           <NavLink
-            to={NHX_CONFIG._app_endpoints_._MAIN__.__LOGS__}
+            to={`${NHX_CONFIG._app_endpoints_._MAIN__.__LOGS__}?_src=sidebar`}
             className={({ isActive }) =>
               `sidebar__link ${isActive ? "active" : ""}`
             }
@@ -31,7 +31,7 @@ export const Sidebar: React.FC = () => {
         </li>
         <li>
           <NavLink
-            to={NHX_CONFIG._app_endpoints_._MAIN__.__ANALYTICS__}
+            to={`${NHX_CONFIG._app_endpoints_._MAIN__.__ANALYTICS__}?_src=sidebar`}
             className={({ isActive }) =>
               `sidebar__link ${isActive ? "active" : ""}`
             }

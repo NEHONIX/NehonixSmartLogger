@@ -1,5 +1,5 @@
 import React from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { Login } from "../pages/auth/Login";
 import { Register } from "../pages/auth/Register";
 import { Dashboard } from "../pages/Dashboard/Dashboard";
@@ -8,15 +8,24 @@ import Analytics from "../pages/Analytics/Analytics";
 import { Unauthorized } from "../pages/Unauthorized/Unauthorized";
 import { ProtectedLayout } from "../components/common/ProtectedLayout/ProtectedLayout";
 import { NHX_CONFIG } from "../config/app.conf";
-import { BtnActionsLoadingProvider } from "../hooks/useActionsLoading";
 import { useSetPageTitle } from "../utils/setPageTitle";
 import { ProtectedRoute } from "../components/common/ProtectedRoute/ProtectedRoute";
+import NotFound from "../pages/NotFound/NotFound";
 
 export const AppRoutes: React.FC = () => {
   useSetPageTitle();
   return (
     <Routes>
       {/* Redirection de la racine vers dashboard */}
+      <Route
+        path="/app"
+        element={
+          <Navigate
+            to={NHX_CONFIG._app_endpoints_._MAIN__.__DASHBOARD__}
+            replace
+          />
+        }
+      />
       <Route
         path="/"
         element={
@@ -41,14 +50,37 @@ export const AppRoutes: React.FC = () => {
         element={<Unauthorized />}
       />
 
-      {/* Routes protégées */}
+      {/* Routes protégées avec layout */}
+      <Route
+        element={
+          <ProtectedRoute>
+            <ProtectedLayout>
+              <Outlet />
+            </ProtectedLayout>
+          </ProtectedRoute>
+        }
+      >
+        <Route
+          path={NHX_CONFIG._app_endpoints_._MAIN__.__DASHBOARD__}
+          element={<Dashboard />}
+        />
+
+        <Route
+          path={NHX_CONFIG._app_endpoints_._MAIN__.__ANALYTICS__}
+          element={<Analytics />}
+        />
+        <Route
+          path={NHX_CONFIG._app_endpoints_._MAIN__.__LOGS__}
+          element={<LiveLogs />}
+        />
+      </Route>
+
+      {/* Routes protégées sans layout */}
       <Route
         path={`${NHX_CONFIG._app_endpoints_._MAIN__.__ANALYTICS__}/:appId`}
         element={
           <ProtectedRoute>
-            <BtnActionsLoadingProvider>
-              <Analytics />
-            </BtnActionsLoadingProvider>
+            <Analytics />
           </ProtectedRoute>
         }
       />
@@ -56,38 +88,13 @@ export const AppRoutes: React.FC = () => {
         path={`${NHX_CONFIG._app_endpoints_._MAIN__.__LOGS__}/:appId`}
         element={
           <ProtectedRoute>
-            <BtnActionsLoadingProvider>
-              <LiveLogs />
-            </BtnActionsLoadingProvider>
+            <LiveLogs />
           </ProtectedRoute>
         }
       />
-      <Route
-        path="/*"
-        element={
-          <ProtectedLayout>
-            <Routes>
-              <Route
-                path={NHX_CONFIG._app_endpoints_._MAIN__.__DASHBOARD__}
-                element={
-                  <BtnActionsLoadingProvider>
-                    <Dashboard />
-                  </BtnActionsLoadingProvider>
-                }
-              />
 
-              <Route
-                path={NHX_CONFIG._app_endpoints_._MAIN__.__ANALYTICS__}
-                element={
-                  <BtnActionsLoadingProvider>
-                    <Analytics />
-                  </BtnActionsLoadingProvider>
-                }
-              />
-            </Routes>
-          </ProtectedLayout>
-        }
-      />
+      {/* Route 404 */}
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 };

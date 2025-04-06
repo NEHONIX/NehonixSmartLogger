@@ -239,7 +239,7 @@ export const AdvancedConfigModal: React.FC<AdvancedConfigModalProps> = ({
                 </select>
               </div>
 
-              <div className="form-group checkbox-group">
+              {/* <div className="form-group checkbox-group">
                 <label className="checkbox-label">
                   <input
                     type="checkbox"
@@ -253,9 +253,9 @@ export const AdvancedConfigModal: React.FC<AdvancedConfigModalProps> = ({
                   />
                   Activer le chiffrement des logs
                 </label>
-              </div>
+              </div> */}
 
-              {config.encryption.enabled && (
+              {/* {config.encryption.enabled && (
                 <div className="form-group encryption-key">
                   <label htmlFor="encryptionKey">
                     Clé de chiffrement (optionnelle)
@@ -273,7 +273,7 @@ export const AdvancedConfigModal: React.FC<AdvancedConfigModalProps> = ({
                     }
                   />
                 </div>
-              )}
+              )} */}
             </div>
           )}
 

@@ -1,47 +1,54 @@
 {
-  "type": "metrics",
-  "data": {
-    "userId": "nehonix_631f3125-6013-4cc0-8302-cd6f55098628",
+  "user": {
+    "userId": "nehonix_631f3125-6013-4cc0-8302-cd6f55098628"
+  },
+  "app": {
+    "provider": "nehonix",
+    "apiKey": "nehonix@fd55427ad4ef175e34314a04feec589fab6ed103749d6fd20e6ba07e3ad28c63.nsl",
     "appId": "e817d9d4-14a5-4696-a9e0-916fdbd90542",
-    "metrics": {
-      "cpu": {
-        "usage": 78.81431754805547,
-        "cores": 4,
-        "loadAverage": [0, 0, 0]
-      },
-      "memory": {
-        "total": 8438513664,
-        "used": 7365541888,
-        "free": 1072971776,
-        "usagePercent": 87.28482504475329
-      },
-      "process": {
-        "uptime": 5.7613461,
-        "memoryUsage": {
-          "rss": 147718144,
-          "heapTotal": 3838976,
-          "heapUsed": 3233469,
-          "external": 1259167,
-          "arrayBuffers": 67206
-        }
-      },
-      "network": {
-        "interfaces": {
-          "Wi-Fi": {
-            "bytesReceived": 0,
-            "bytesSent": 0,
-            "packetsReceived": 0,
-            "packetsSent": 0
-          },
-          "Loopback Pseudo-Interface 1": {
-            "bytesReceived": 0,
-            "bytesSent": 0,
-            "packetsReceived": 0,
-            "packetsSent": 0
-          }
-        }
-      }
-    },
-    "timestamp": "2025-04-06T08:13:47.003Z"
+    "name": "My super app with config"
+  },
+  "console": {
+    "colorized": true,
+    "enabled": true,
+    "format": "simple",
+    "showLogLevel": true,
+    "showTimestamp": true
+  },
+  "encryption": {
+    "enabled": false,
+    "key": ""
+  },
+  "logLevel": "info",
+  "monitoring": {
+    "enabled": true,
+    "maxEventsPerSecond": 100,
+    "monitorCPU": true,
+    "monitorMemory": true,
+    "monitorNetwork": true,
+    "samplingRate": 10
+  },
+  "network": {
+    "batchSize": 50,
+    "maxOfflineSize": 50,
+    "offlineStorage": true,
+    "retryAttempts": 3,
+    "retryDelay": 1000,
+    "timeout": 5000
+  },
+  "performance": {
+    "enabled": true,
+    "maxEventsPerSecond": 100,
+    "monitorCPU": true,
+    "monitorMemory": true,
+    "samplingRate": 10
+  },
+  "persistence": {
+    "compressArchives": true,
+    "enabled": true,
+    "maxFiles": 10,
+    "maxSize": 100,
+    "retentionPeriod": 30,
+    "rotationInterval": "daily"
   }
 }

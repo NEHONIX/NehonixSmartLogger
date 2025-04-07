@@ -7,6 +7,7 @@ Une bibliothèque de logging intelligente et sécurisée avec interface de suivi
 - [Fonctionnalités](#fonctionnalités)
 - [Installation](#installation)
 - [Guide de démarrage rapide](#guide-de-démarrage-rapide)
+- [Modes d'importation](#modes-dimportation)
 - [Mode d'écriture des logs](#mode-décriture-des-logs)
 - [Configuration avancée](#configuration-avancée)
 - [Interface Web](#interface-web)
@@ -56,62 +57,104 @@ Créez un fichier `nehonix.config.json`:
 }
 ```
 
-### 2. Initialisation
+## Modes d'importation
+
+NehonixSmartLogger offre trois modes d'importation de configuration, chacun adapté à différents cas d'utilisation :
+
+### 1. Mode Local (Recommandé pour le développement)
 
 ```typescript
-import { NehonixSmartLogger } from "nehonix-logger";
-
-// Méthode recommandée : utilisation d'un fichier de configuration
-/**
- * NOTE: la lecture se fait à la racine du projet exemple:
- *
- * -Mon_Projet:
- *   -src
- *   -public
- *   -other
- *   -config
- *      - nehonix.config.json
- *      - autre_config.json
- */
-const logger = NehonixSmartLogger.from("./config").import(
-  "nehonix.config.json" //ou autre_config.json si le fichier se trouve par exemple dans src, avancez d'un niveau, exemple: ./src/config ou ./../config
+const logger = await NehonixSmartLogger.from("./config").import(
+  "nehonix.config.json"
 );
-
-// Par défaut, le logger démarre en mode local
-logger.info("Message en mode local");
-logger.debug("Debug en mode local");
-
-// Activation du mode remote pour la synchronisation avec le serveur
-logger.enableRemoteMode();
-
-// Les logs suivants seront envoyés au serveur
-logger.info("Message en mode remote");
-logger.debug("Debug en mode remote");
-
-// Retour au mode local si nécessaire
-logger.disableRemoteMode();
 ```
 
-### 3. Utilisation des différents niveaux de log
+✅ **Avantages**
+
+- Configuration simple et rapide
+- Idéal pour le développement local
+- Pas de dépendance réseau
+
+### 2. Mode Web (@web)
 
 ```typescript
-// Méthodes de log simplifiées
-logger.info("Information importante");
-logger.error("Une erreur est survenue");
-logger.warn("Attention");
-logger.debug("Message de debug");
-
-// Logging avec options avancées
-logger.logWithOptions(
-  {
-    logMode: {
-      enable: true,
-      name: "app-log",
-    },
-    typeOrMessage: "info",
-  },
-  "Message avec options avancées"
+const logger = await NehonixSmartLogger.from("@_web").import(
+  "https://api.example.com/config.json"
 );
+```
+
+✅ **Avantages**
+
+- Configuration centralisée
+- Mise à jour dynamique possible
+- Gestion multi-environnements
+
+📚 [Guide complet du mode Web](docs/web_mode.md)
+
+### 3. Mode Hybride (Recommandé pour la production)
+
+```typescript
+// Configuration avec fallback
+try {
+  const logger = await NehonixSmartLogger.from("@_web").import(
+    "https://api.example.com/config.json"
+  );
+} catch (error) {
+  console.warn("Fallback to local config:", error);
+  const logger = await NehonixSmartLogger.from("./config").import(
+    "nehonix.config.json"
+  );
+}
+```
+
+✅ **Avantages**
+
+- Robustesse maximale
+- Fallback automatique
+- Idéal pour la production
+
+### Notre recommandation
+
+Pour une utilisation optimale de NehonixSmartLogger, nous recommandons :
+
+1. **Développement** : Mode Local
+
+   - Configuration simple via fichier local
+   - Itération rapide
+
+2. **Tests/Staging** : Mode Web
+
+   - Configuration centralisée
+   - Tests des fonctionnalités distantes
+
+3. **Production** : Mode Hybride
+   - Robustesse maximale
+   - Fallback automatique
+   - Monitoring distant optionnel
+
+```typescript
+// Exemple de configuration recommandée pour la production
+async function setupProductionLogger() {
+  try {
+    // Tentative de chargement distant
+    const logger = await NehonixSmartLogger.from("@_web").import(
+      "https://api.example.com/config.json"
+    );
+
+    // Activation optionnelle du mode remote
+    if (process.env.ENABLE_REMOTE_MONITORING === "true") {
+      logger.enableRemoteMode();
+    }
+
+    return logger;
+  } catch (error) {
+    console.warn("Fallback to local config:", error);
+    // Fallback vers configuration locale
+    return await NehonixSmartLogger.from("./config").import(
+      "nehonix.config.json"
+    );
+  }
+}
 ```
 
 ## Mode d'écriture des logs

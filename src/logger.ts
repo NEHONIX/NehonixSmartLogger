@@ -25,6 +25,12 @@ import { NHX_CONFIG } from "../web/shared/config/logger.conf";
 import { LogPersistenceService } from "./services/LogPersistenceService";
 import { PerformanceMonitoringService } from "./services/PerformanceMonitoringService";
 import { EncryptionService } from "./services/EncryptionService";
+import {
+  WebConfigService,
+  WebConfigOptions,
+} from "./services/WebConfigService";
+import { MetricsSummary } from "./services/config/MetricsCollector";
+import { ImportKeys, importPattern } from "./services/config/importPattern";
 
 // Niveaux de log disponibles
 const LOG_LEVELS: LOG_LEVELS_TYPE = {
@@ -60,12 +66,14 @@ export class NehonixSmartLogger extends EventEmitter {
   private persistenceService: LogPersistenceService;
   private monitoringService: PerformanceMonitoringService;
   private encryptionService: EncryptionService;
+  private webConfigService: WebConfigService;
   private config: NSL_CONFIG | null = null;
   private configPath: string = "";
   private isAuthenticated: boolean = false;
   private pendingLogs: LogEntry[] = [];
   private isRemoteMode: boolean = false;
   private isInitialized: boolean = false;
+  private import_patterns: typeof importPattern = importPattern;
 
   private constructor() {
     super();
@@ -74,10 +82,23 @@ export class NehonixSmartLogger extends EventEmitter {
     this.persistenceService = LogPersistenceService.getInstance();
     this.monitoringService = PerformanceMonitoringService.getInstance();
     this.encryptionService = EncryptionService.getInstance();
+    this.webConfigService = WebConfigService.getInstance();
   }
 
   public static from(configPath: string): NehonixSmartLogger {
     const instance = NehonixSmartLogger.getInstance();
+    /**
+     * le pattern @_web est utilisé pour le mode distant
+     */
+    const import_patterns = instance.import_patterns;
+
+    // Gestion spéciale pour @web
+    if (Object.keys(import_patterns).includes(configPath)) {
+      // Ne pas activer le mode remote automatiquement
+      import_patterns[configPath as ImportKeys].mode = "on";
+      console.log(chalk.yellowBright("Using super import mode"));
+      return instance;
+    }
 
     // On utilise process.cwd() qui donne le répertoire de travail actuel
     const currentDir = process.cwd();
@@ -87,27 +108,66 @@ export class NehonixSmartLogger extends EventEmitter {
     return instance;
   }
 
-  public import(configName: string): NehonixSmartLogger {
+  public async import(
+    configSource: string,
+    webConfigOptions?: WebConfigOptions
+  ): Promise<NehonixSmartLogger> {
     try {
-      const configPath = path.join(this.configPath, configName);
+      const confirm = async () => {
+        this.currentLogLevel =
+          LOG_LEVELS[
+            this.config?.logLevel?.toLowerCase() as keyof LOG_LEVELS_TYPE
+          ] || LOG_LEVELS.debug;
+
+        if (!this.isInitialized) {
+          this.isInitialized = true;
+          await this.initialize();
+        }
+      };
+
+      // Vérifier si c'est une URL
+      const isUrl =
+        configSource.startsWith("http://") ||
+        configSource.startsWith("https://");
+
+      const import_patterns = NehonixSmartLogger.getInstance().import_patterns;
+
+      if (import_patterns["@_web"].mode === "on") {
+        if (!isUrl) {
+          throw new Error("URL is required when using web mode");
+        }
+        const defaultWebConfigOptions: WebConfigOptions = {
+          cache: {
+            enabled: true,
+            duration: "1h",
+          },
+          security: {
+            validateSSL: true,
+            validateContent: true,
+          },
+        };
+        // Charger la configuration depuis l'URL
+        const config = await this.loadRemoteConfig(configSource, {
+          ...defaultWebConfigOptions,
+          ...webConfigOptions,
+        });
+
+        console.log(chalk.greenBright("Config loaded successfully"));
+        this.config = config;
+        await confirm();
+        return this;
+      }
+
+      // Charger depuis un fichier local
+      const configPath = path.join(this.configPath, configSource);
       console.log(chalk.yellowBright("Loading config from:", configPath));
       const configContent = fs.readFileSync(configPath, "utf-8");
       console.log(chalk.green("Config loaded successfully"));
       this.config = JSON.parse(configContent) as NSL_CONFIG;
-      this.currentLogLevel =
-        LOG_LEVELS[
-          this.config.logLevel?.toLowerCase() as keyof LOG_LEVELS_TYPE
-        ] || LOG_LEVELS.debug;
-      // // Ne pas activer le mode remote ici, cela sera fait par enableRemoteMode()
-      if (!this.isInitialized) {
-        this.isInitialized = true;
-        this.initialize();
-      }
+      await confirm();
       return this;
     } catch (error) {
-      throw new Error(
-        "Erreur lors de l'importation de la configuration: " + error
-      );
+      throw new Error("Error while importing config: " + error);
     }
   }
 
@@ -523,6 +583,8 @@ export class NehonixSmartLogger extends EventEmitter {
       this.wsClient.close();
       this.wsClient = null;
     }
+    // Réinitialiser le service de configuration
+    this.webConfigService.reset();
   }
 
   public log(...args: unknown[]): void {
@@ -880,6 +942,63 @@ export class NehonixSmartLogger extends EventEmitter {
     });
 
     return decryptedLines.join("\n");
+  }
+
+  /**
+   * Charge une configuration depuis une URL distante
+   * @param url L'URL de la configuration
+   * @param options Options de configuration
+   */
+  public async loadRemoteConfig(
+    url: string,
+    options?: WebConfigOptions
+  ): Promise<NSL_CONFIG> {
+    try {
+      const config = await this.webConfigService.loadConfig(url, options);
+      // if (config) {
+      //   this.config = config;
+      //   this.currentLogLevel =
+      //     LOG_LEVELS[config.logLevel?.toLowerCase() as keyof LOG_LEVELS_TYPE] ||
+      //     LOG_LEVELS.debug;
+
+      //   if (!this.isInitialized) {
+      //     this.isInitialized = true;
+      //     await this.initialize();
+      //   }
+
+      //   // Émettre un événement pour notifier du changement de configuration
+      //   this.emit("configUpdated", config);
+      // }
+      // console.log("config", config);
+      return config;
+    } catch (error) {
+      this.error("Error while loading remote config:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Précharge une configuration depuis une URL distante
+   * @param url L'URL de la configuration
+   * @param options Options de configuration
+   */
+  public preloadRemoteConfig(url: string, options?: WebConfigOptions): void {
+    this.webConfigService.preloadConfig(url, options);
+  }
+
+  /**
+   * Invalide le cache de configuration pour une URL donnée
+   * @param url L'URL de la configuration
+   */
+  public invalidateConfigCache(url: string): void {
+    this.webConfigService.invalidateCache(url);
+  }
+
+  /**
+   * Récupère les métriques de performance du service de configuration
+   */
+  public getConfigMetrics(): MetricsSummary {
+    return this.webConfigService.getMetrics();
   }
 }
 

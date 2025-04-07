@@ -1,3 +1,12 @@
 # https://www.robotstxt.org/robotstxt.html
 User-agent: *
-Disallow:
+Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /private/
+
+# Sitemap
+Sitemap: https://console.nehonix.space/sitemap.xml
+
+# Crawl-delay
+Crawl-delay: 10

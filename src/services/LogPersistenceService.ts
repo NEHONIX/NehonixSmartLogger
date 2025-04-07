@@ -31,7 +31,7 @@ export class LogPersistenceService {
     if (!LogPersistenceService.instance) {
       LogPersistenceService.instance = new LogPersistenceService();
     }
-    console.log(chalk.blueBright("LogPersistenceService instance created"));
+    // console.log(chalk.blueBright("LogPersistenceService instance created"));
     return LogPersistenceService.instance;
   }
 
